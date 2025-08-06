@@ -41,7 +41,7 @@ zkRocket 要实现如下 retrieve 接口：
 <img width="852" height="594" alt="image" src="https://github.com/user-attachments/assets/a90a5e38-f7f5-40a4-9907-c951dd54bce2" />
 
 ## zkRockets 的应用合约
-zkRocket 应用合约要实现如下execute 接口：
+应用合约要实现如下execute 接口：
 ```solidity 
  function execute(bytes calldata data) external;
 ```
