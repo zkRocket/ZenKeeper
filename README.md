@@ -32,9 +32,19 @@ zkRocket 要实现如下 retrieve 接口：
 ### zkRockets 主要流程
 
 #### 在zkBridge上注册 zkRockets 
-<img width="675" height="382" alt="image" src="https://github.com/user-attachments/assets/4ae09a99-4f57-48b5-82bd-cfe47a3b7ad3" />
+```mermaid
+sequenceDiagram
+    participant adminstrator
+    participant zkBridge
+
+    adminstrator ->> zkBridge: updateReserveInterface(zkRocketAddress)
+    zkBridge ->> zkBridge: reserveInterface = zkRocketAddress
+
+```
 
 #### 在zkRockets上注册应用协议
+
+
 <img width="782" height="420" alt="image" src="https://github.com/user-attachments/assets/b7c34a89-e155-4c74-990c-5f7b76ac39bc" />
 
 #### 用户调用zkBridge 的retrieve 函数，触发zkRockets 处理 
