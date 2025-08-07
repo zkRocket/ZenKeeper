@@ -57,10 +57,42 @@ sequenceDiagram
 
 
 #### 用户调用zkBridge 的retrieve 函数，触发zkRockets 处理 
-<img width="852" height="594" alt="image" src="https://github.com/user-attachments/assets/a90a5e38-f7f5-40a4-9907-c951dd54bce2" />
+```mermaid
+sequenceDiagram
+    participant user 
+    participant zkBridge
+    participant zkRocket
+    participant vault
+    participant zkRunes 
 
+user ->> zkBridge: retrieve(txid)
+zkBridge ->> zkBridge: if retrieved == true, revert 
+zkBridge ->> zkRocket: retrieve(index, blockHash, amount, data)
+zkRocket ->> zkRocket: decode data 得到 vaultAddress, userAddress, userOption, protocolId
+Note over zkRocket, vault: zkRocket's vault 
+alt vault[vaultAddress] == true 
+    zkRocket ->> vault: claim(userAddress, amount, userOption)
+    
+    alt withdraw==true
+        vault->>vault: IERC20(zkBTC).transfer(userAddress, amount) //将zkBTC转给用户
+    else 
+        vault->>vault: balance[userAddress] += amount //给用户记账
+    end
+    vault ->> zkRocket:
+    zkRocket ->>zkRocket: vaultAddress = 0, userAddress =0, amount = 0
+end 
+
+
+alt applications[protocolId] != address(0)
+  zkRocket->>zkRunes:  execute(vaultAddress, userAddress, userOption, amount, appData)
+else applications[protocolId] == address(0)
+  Note over zkRocket, zkRunes: do nothing 
+end
+zkRocket->>zkBridge:
+zkBridge->>zkBridge: retrieved =true
+```
 ## zkRockets 的应用合约
 应用合约要实现如下execute 接口：
 ```solidity 
- function execute(bytes calldata data) external;
+ function execute(address vaultAddress, addres userAddress, bool userOption, uint256 amount, bytes calldata data) external;
 ```
