@@ -48,10 +48,10 @@ sequenceDiagram
 #### 在zkRockets上注册应用协议
 ```mermaid
 sequenceDiagram
-    participant adminstrator
+    participant aution
     participant zkRocket
 
-    adminstrator ->> zkRocket: addApplication(protocolId, appAddress)
+    aution ->> zkRocket: addApplication(protocolId, appAddress)
     zkRocket ->> zkRocket: appliations[protocolId] = appAddress
 ```
 
