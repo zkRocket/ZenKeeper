@@ -30,7 +30,7 @@ contract Vault is AccessControl {
     }
 
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), "Caller is not admin");
+        require(hasRole(OPERATOR_ROLE, msg.sender), "Caller is not operator");
         _;
     }
 
@@ -111,4 +111,6 @@ contract Vault is AccessControl {
         bool success = IERC20(_token).transfer(msg.sender, amount);
         require(success, "Emergency withdraw failed");
     }
+
+
 }

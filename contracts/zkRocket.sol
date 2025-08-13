@@ -2,39 +2,22 @@
 pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts@5.4.0/access/AccessControl.sol";
+import "../interfaces/IZkBridge.sol";
+import "../interfaces/IVault.sol";
+import "../interfaces/IApplication.sol";
 
-    struct ProvenData {
-        uint32 index;
-        bytes32 blockHash;
-        uint64 associatedAmount;
-        bytes data;
-        bool retrieved;
-    }
-
-interface ReserveInterface {
-    function retrieve(ProvenData calldata info) external;
-}
-
-interface IVault {
-    function claim(address token, address to, uint256 amount, bool withdrawal) external;
-}
-
-interface IApplication {
-    function execute(bytes calldata) external;
-}
-
-contract ZenKeeper is AccessControl {
+contract ZKRocket is AccessControl {
     address immutable public zkBTC;
     mapping(address => bool) public vaults;
     mapping(uint16 => address) public applications;
 
     /// @notice operator 角色标识
-    bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 public constant AUCTION_LAUNCHER_ROLE = keccak256("AUCTION_LAUNCHER_ROLE");
     bytes32 public constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
 
     event VaultAdded(address indexed vault);
     event VaultRemoved(address indexed vault);
-    event ApplicationRegistered(uint8 indexed protocolId, address indexed protoclAddress);
+    event ApplicationRegistered(uint16 indexed protocolId, address indexed protoclAddress);
 
     /// ---------- 修饰器 ----------
     modifier onlyAdmin() {
@@ -42,13 +25,13 @@ contract ZenKeeper is AccessControl {
         _;
     }
 
-    modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), "Caller is not admin");
+    modifier onlyAuctionLauncher() {
+        require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender), "Caller is not auction launcher");
         _;
     }
 
     modifier onlyBridge() {
-        require(hasRole(BRIDGE_ROLE, msg.sender), "Caller is not admin");
+        require(hasRole(BRIDGE_ROLE, msg.sender), "Caller is not bridge");
         _;
     }
 
@@ -72,19 +55,24 @@ contract ZenKeeper is AccessControl {
         emit VaultRemoved(_vault);
     }
 
-    /// @notice 设置应用地址（仅限 admin）
-    function registerApplication(uint8 _protocolId, address _protocolAddress) external onlyOperator {
+    /// @notice aution launcher register application
+    function registerApplication(uint16 _protocolId, address _protocolAddress) external onlyAuctionLauncher {
         require(_protocolAddress.code.length > 0, "Invalid application address");
         applications[_protocolId] = _protocolAddress;
         emit ApplicationRegistered(_protocolId, _protocolAddress);
     }
 
-    /// @notice 设置应用地址（仅限 admin）
-    /*           | <---------------------------at least 45 bytes ------------------------------>|
+    /// @notice  only zkBridge
+    /*           | <---------------------------at least 46 bytes ------------------------------>|
     fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId  userOption userAddress  appData
     length(bytes):    1        1       0/1/2/4        20            1           2          1          20
     */
-    function retrieve(ProvenData calldata _info) external onlyBridge {
+
+    event DebugAddress(string label, address addr);
+    event DebugUint(string label, uint256 value);
+    event DebugBytes(string label, bytes data);
+
+    function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
         if (_info.data.length < 46){
             return;
         }
@@ -93,10 +81,10 @@ contract ZenKeeper is AccessControl {
         uint256 vaultAddressOffset = 0;
 
         {
-            //decode data after OP_RETURN
+            //data[0]=OP_RETURN,
             uint256 l;
             uint8 opcode = uint8(data[1]);
-            if (0x2ce <= opcode && opcode <= 0x4B) {
+            if (0x2c <= opcode && opcode <= 0x4B) { //44 ~75
                 l = opcode;
                 vaultAddressOffset = 2;
             } else if (opcode == 0x4c) {
@@ -111,7 +99,8 @@ contract ZenKeeper is AccessControl {
                     (uint32(uint8(data[4])) << 8) + uint32(uint8(data[5]));
                 vaultAddressOffset = 6;
             }
-            require(l == data.length-1-vaultAddressOffset, "Invalid data length");
+            require(l == data.length-vaultAddressOffset, "Invalid data length");
+            emit DebugUint("len", l);
         }
 
         // 解析字段
@@ -119,8 +108,10 @@ contract ZenKeeper is AccessControl {
         address userAddress;
 
         assembly {
-            vaultAddress := mload(add(add(data, 0x20), vaultAddressOffset))
-            userAddress := mload(add(add(data, 0x20), add(vaultAddressOffset,24))) // vault(20)+chainId(1)+protocolId(2)+userOption(1)=24
+            vaultAddress := shr(96, mload(add(add(data, 0x20), vaultAddressOffset)))
+            userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 24))))
+        // vaultAddress := mload(add(add(data, 0x20), vaultAddressOffset))
+        // userAddress := mload(add(add(data, 0x20), add(vaultAddressOffset,24))) // vault(20)+chainId(1)+protocolId(2)+userOption(1)=24
         }
 
         // uint8 chainId = uint8(data[vaultAddressOffset + 20]);
@@ -128,11 +119,22 @@ contract ZenKeeper is AccessControl {
         bool withdraw = data[vaultAddressOffset + 23] != 0;
 
         bytes memory appData = sliceFrom(data, vaultAddressOffset+44);
+
+
+        emit DebugUint("vaultAddressOffset", vaultAddressOffset);
+        emit DebugAddress("vaultAddress", vaultAddress);
+        emit DebugAddress("userAddress", userAddress);
+        emit DebugUint("protocolId", protocolId);
+        emit DebugUint("withdraw", withdraw ? 1 : 0);
+        emit DebugBytes("appData", sliceFrom(data, vaultAddressOffset+44));
+
         if (vaults[vaultAddress]) {
+            emit DebugUint("claim", _info.associatedAmount);
             IVault(vaultAddress).claim(zkBTC, userAddress, _info.associatedAmount, withdraw);
         }
 
         if (applications[protocolId] != address(0)) {
+            emit DebugAddress("protocolAddress", applications[protocolId]);
             IApplication(applications[protocolId]). execute(appData);
         }
     }

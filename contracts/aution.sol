@@ -5,12 +5,10 @@ import "@openzeppelin/contracts@5.4.0/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts@5.4.0/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts@5.4.0/token/ERC20/extensions/IERC20Permit.sol";
 import "@openzeppelin/contracts@5.4.0/access/AccessControl.sol";
+import "../interfaces/IApplication.sol";
 
-interface IRegisterApplication {
-    function registerApplication(uint256 protocolId, address protocolAddress) external;
-}
 
-contract DutchAuctionLauncher is AccessControl, ReentrancyGuard {
+contract AuctionLauncher is AccessControl, ReentrancyGuard {
     IERC20 public immutable token;
     uint256 public duration;
     uint256 public minPrice;
