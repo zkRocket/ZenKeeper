@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts@5.4.0/access/AccessControl.sol";
-import "../interfaces/IZkBridge.sol";
-import "../interfaces/IVault.sol";
-import "../interfaces/IApplication.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./interfaces/IZkBridge.sol";
+import "./interfaces/IVault.sol";
+import "./interfaces/IApplication.sol";
 
 contract ZKRocket is AccessControl {
     address immutable public zkBTC;
