@@ -30,7 +30,7 @@ zkRocket 处理deposit 交易中OP_RETURN 后的数据
 
 zkRocket 要实现如下 retrieve 接口：
 ```solidity 
- function retrieve(ProvenData calldata info) external;
+ function retrieve(ProvenData calldata info,bytes32 txid ) external;
 ```
 ### zkRockets 主要流程
 
