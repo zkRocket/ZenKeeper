@@ -106,11 +106,8 @@ contract ZKRocket is AccessControl {
         assembly {
             vaultAddress := shr(96, mload(add(add(data, 0x20), vaultAddressOffset)))
             userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 24))))
-        // vaultAddress := mload(add(add(data, 0x20), vaultAddressOffset))
-        // userAddress := mload(add(add(data, 0x20), add(vaultAddressOffset,24))) // vault(20)+chainId(1)+protocolId(2)+userOption(1)=24
-        }
+           }
 
-        // uint8 chainId = uint8(data[vaultAddressOffset + 20]);
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
         bool withdraw = data[vaultAddressOffset + 23] != 0;
 
@@ -121,7 +118,7 @@ contract ZKRocket is AccessControl {
         }
 
         if (applications[protocolId] != address(0)) {
-            IApplication(applications[protocolId]). execute(appData);
+            IApplication(applications[protocolId]). execute(vaultAddress, userAddress, withdraw, _info.associatedAmount, appData);
         }
     }
 
