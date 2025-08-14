@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts@5.4.0/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts@5.4.0/access/AccessControl.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Vault is AccessControl {
     /// @notice 用户余额：token => user => amount

@@ -4,7 +4,6 @@ interface IApplication {
     function execute(bytes calldata) external;
 }
 
-
 interface IRegisterApplication {
-    function registerApplication(uint256 protocolId, address protocolAddress) external;
+    function registerApplication(uint16 protocolId, address protocolAddress) external;
 }

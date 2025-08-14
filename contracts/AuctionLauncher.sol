@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts@5.4.0/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts@5.4.0/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts@5.4.0/token/ERC20/extensions/IERC20Permit.sol";
-import "@openzeppelin/contracts@5.4.0/access/AccessControl.sol";
-import "../interfaces/IApplication.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import "@openzeppelin/contracts/access/AccessControl.sol";
+import "./interfaces/IApplication.sol";
 
 
 contract AuctionLauncher is AccessControl, ReentrancyGuard {
@@ -13,7 +13,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     uint256 public duration;
     uint256 public minPrice;
     address public developer;
-    uint256 public nextProtocolId = 1;
+    uint16 public nextProtocolId = 1;
 
     IRegisterApplication public zkRocket;
 
@@ -92,7 +92,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
 
         bidRecords[nextProtocolId] = _bid;
         zkRocket.registerApplication(nextProtocolId, _protocolAddress);
-        emit AuctionSuccess(nextProtocolId, _protocolAddress, msg.sender, _price, block.timestamp);
+        emit AuctionSuccess(uint256(nextProtocolId), _protocolAddress, msg.sender, _price, block.timestamp);
 
 
         // start next auction immediately
