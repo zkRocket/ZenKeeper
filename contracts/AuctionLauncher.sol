@@ -13,7 +13,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     uint256 public duration;
     uint256 public minPrice;
     address public developer;
-    uint256 public nextProtocolId = 1;
+    uint16 public nextProtocolId = 1;
 
     IRegisterApplication public zkRocket;
 
@@ -92,7 +92,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
 
         bidRecords[nextProtocolId] = _bid;
         zkRocket.registerApplication(nextProtocolId, _protocolAddress);
-        emit AuctionSuccess(nextProtocolId, _protocolAddress, msg.sender, _price, block.timestamp);
+        emit AuctionSuccess(uint256(nextProtocolId), _protocolAddress, msg.sender, _price, block.timestamp);
 
 
         // start next auction immediately
