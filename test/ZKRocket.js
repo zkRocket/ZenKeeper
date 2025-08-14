@@ -104,7 +104,6 @@ txid: 0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c
 
         it("to user address", async function () {
             let data = "0x6a14" + owner.address.replace("0x", "")
-            console.log("data",data);
             const provenData = {
                 index: 1,
                 blockHash: txid,
