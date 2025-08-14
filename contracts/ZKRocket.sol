@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IZkBridge.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IApplication.sol";
+import "hardhat/console.sol";
 
 contract ZKRocket is AccessControl {
     address immutable public zkBTC;
@@ -63,14 +64,10 @@ contract ZKRocket is AccessControl {
     }
 
     /// @notice  only zkBridge
-    /*           | <---------------------------at least 46 bytes ------------------------------>|
+    /*           | <--------------------------------at least 46 bytes ----------------------------------->|
     fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId  userOption userAddress  appData
     length(bytes):    1        1       0/1/2/4        20            1           2          1          20
     */
-
-    event DebugAddress(string label, address addr);
-    event DebugUint(string label, uint256 value);
-    event DebugBytes(string label, bytes data);
 
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
         if (_info.data.length < 46){
@@ -100,7 +97,6 @@ contract ZKRocket is AccessControl {
                 vaultAddressOffset = 6;
             }
             require(l == data.length-vaultAddressOffset, "Invalid data length");
-            emit DebugUint("len", l);
         }
 
         // 解析字段
@@ -120,21 +116,11 @@ contract ZKRocket is AccessControl {
 
         bytes memory appData = sliceFrom(data, vaultAddressOffset+44);
 
-
-        emit DebugUint("vaultAddressOffset", vaultAddressOffset);
-        emit DebugAddress("vaultAddress", vaultAddress);
-        emit DebugAddress("userAddress", userAddress);
-        emit DebugUint("protocolId", protocolId);
-        emit DebugUint("withdraw", withdraw ? 1 : 0);
-        emit DebugBytes("appData", sliceFrom(data, vaultAddressOffset+44));
-
         if (vaults[vaultAddress]) {
-            emit DebugUint("claim", _info.associatedAmount);
             IVault(vaultAddress).claim(zkBTC, userAddress, _info.associatedAmount, withdraw);
         }
 
         if (applications[protocolId] != address(0)) {
-            emit DebugAddress("protocolAddress", applications[protocolId]);
             IApplication(applications[protocolId]). execute(appData);
         }
     }

@@ -23,18 +23,15 @@ describe("AuctionLauncher", function () {
         const ZKBTC = await ethers.getContractFactory("MockZkBTC");
         zkbtc = await ZKBTC.deploy();
         await zkbtc.waitForDeployment();
-        console.log("zkbtc deployed to:", await zkbtc.getAddress());
 
 
         const ZKRocket = await ethers.getContractFactory("ZKRocket");
         zkRocket = await ZKRocket.deploy(await zkbtc.getAddress());
         await zkRocket.waitForDeployment();
-        console.log("zkRocket deployed to:", await zkRocket.getAddress());
 
         const MockApp = await ethers.getContractFactory("MockApp");
         mockApp = await MockApp.deploy();
         await mockApp.waitForDeployment();
-        console.log("mockApp deployed to:", await mockApp.getAddress());
 
         const AuctionLauncher = await ethers.getContractFactory("AuctionLauncher");
         auction = await AuctionLauncher.deploy(
@@ -45,7 +42,6 @@ describe("AuctionLauncher", function () {
             await zkRocket.getAddress()
         );
         await auction.waitForDeployment();
-        console.log("auction deployed to:", await auction.getAddress());
 
         await zkRocket.grantRole(
             await zkRocket.AUCTION_LAUNCHER_ROLE(),
