@@ -24,7 +24,7 @@ zkRocket 处理deposit 交易中OP_RETURN 后的数据
    - zkRocket 控制的vault 地址。
    - zkRocket 上的应用(例如zkRunes)控制的vault 地址。 
 - chainId: 因为支持从BTC 跨链到多条EVM链，用chainId跨链的目标链，0-eth 
-- userOption: true:用户参与Vault，在vault中为用户记账; fasle:用户不参与Vault, 需要将用户的zkBTC 转移到指定的addressB上。
+- userOption: true:需要将用户的zkBTC 转移到指定的addressB上，false:，在vault中为用户记账; 
 - addressB: 用户指定的地址
 - appData: zkRocket上的应用协议数据。
 
