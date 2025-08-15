@@ -10,6 +10,7 @@ import "hardhat/console.sol";
 contract ZKRocket is AccessControl {
     address immutable public zkBTC;
     mapping(address => bool) public vaults;
+    uint16 public nextProtocolId = 1;
     mapping(uint16 => address) public applications;
 
     /// @notice operator 角色标识
@@ -28,6 +29,11 @@ contract ZKRocket is AccessControl {
 
     modifier onlyAuctionLauncher() {
         require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender), "Caller is not auction launcher");
+        _;
+    }
+
+    modifier onlyAuctionLauncherOrAdmin() {
+        require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender)||hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not auction launcher or admin");
         _;
     }
 
@@ -56,12 +62,13 @@ contract ZKRocket is AccessControl {
         emit VaultRemoved(_vault);
     }
 
-    /// @notice aution launcher register application
-    function registerApplication(uint16 _protocolId, address _protocolAddress) external onlyAuctionLauncher {
+    /// @notice auction launcher register application
+    function registerApplication(address _protocolAddress) external onlyAuctionLauncherOrAdmin {
         require(_protocolAddress.code.length > 0, "Invalid application address");
-        applications[_protocolId] = _protocolAddress;
-        emit ApplicationRegistered(_protocolId, _protocolAddress);
-    }
+        applications[nextProtocolId] = _protocolAddress;
+        emit ApplicationRegistered(nextProtocolId, _protocolAddress);
+        nextProtocolId += 1;
+     }
 
     /// @notice  only zkBridge
     /*           | <--------------------------------at least 46 bytes ----------------------------------->|

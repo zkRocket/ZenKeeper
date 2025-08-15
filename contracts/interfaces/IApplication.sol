@@ -5,5 +5,5 @@ interface IApplication {
 }
 
 interface IRegisterApplication {
-    function registerApplication(uint16 _protocolId, address _protocolAddress) external;
+    function registerApplication(address _protocolAddress) external;
 }
