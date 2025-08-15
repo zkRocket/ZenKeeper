@@ -96,3 +96,14 @@ zkBridge->>zkBridge: retrieved =true
 ```solidity 
  function execute(address vaultAddress, addres userAddress, bool userOption, uint256 amount, bytes calldata data) external;
 ```
+
+## 测试准备
+- deploy zkBTC
+- deploy zkRocket
+- deploy mokcApp
+- deploy auction
+- deploy vault
+- 将vault 增加到zkRocket中
+- 将zkRocket 设置为vault 的OPERATOR_ROLE
+- 将Auction 设置为zkRocket的AUCTION_ROLE
+- 将EOA owner 设置为zkRocket的BRIDGE_ROLE 
