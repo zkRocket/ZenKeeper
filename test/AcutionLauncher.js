@@ -77,7 +77,7 @@ describe("AuctionLauncher", function () {
             const startPrice = await auction.auctionStartPrice();
             const minPrice = await auction.auctionMinPrice();
             const duration = await auction.auctionDuration();
-            const protocolId = await auction.nextProtocolId();
+            const round = await auction.round();
 
             // initial Price
             expect(await auction.getCurrentPrice()).to.equal(startPrice);
@@ -108,7 +108,7 @@ describe("AuctionLauncher", function () {
             // 2*duration elapsed
             await time.increase(duration);
             expect(await auction.getCurrentPrice()).to.equal(minPrice);
-            expect(await auction.nextProtocolId()).to.equal(protocolId);
+            expect(await auction.round()).to.equal(round);
         });
 
         it("bid in auction duration", async function () {
@@ -137,11 +137,11 @@ describe("AuctionLauncher", function () {
             let bid = await auction.bidRecords(1);
             expect(bid.buyer).to.equal(user1.address);
             expect(bid.price).to.equal(bidPrice1);
-            expect(bid.protocolId).to.equal(1);
+            expect(bid.round).to.equal(1);
             expect(bid.protocolAddress).to.equal(protocolAddr);
 
             // 检查 nextProtocolId
-            expect(await auction.nextProtocolId()).to.equal(2);
+            expect(await auction.round()).to.equal(2);
             expect(await auction.getCurrentPrice()).to.equal(bidPrice1 * 2n);
             expect(await zkRocket.applications(1)).to.equal(protocolAddr);
 
@@ -171,11 +171,11 @@ describe("AuctionLauncher", function () {
              bid = await auction.bidRecords(2);
             expect(bid.buyer).to.equal(user2.address);
             expect(bid.price).to.equal(bidPrice2);
-            expect(bid.protocolId).to.equal(2);
+            expect(bid.round).to.equal(2);
             expect(bid.protocolAddress).to.equal(protocolAddr);
 
             // 检查 nextProtocolId
-            expect(await auction.nextProtocolId()).to.equal(3);
+            expect(await auction.round()).to.equal(3);
             expect(await auction.getCurrentPrice()).to.equal(bidPrice2 * 2n);
             expect(await zkRocket.applications(2)).to.equal(protocolAddr);
         });
@@ -207,11 +207,11 @@ describe("AuctionLauncher", function () {
             let bid = await auction.bidRecords(1);
             expect(bid.buyer).to.equal(user1.address);
             expect(bid.price).to.equal(bidPrice1);
-            expect(bid.protocolId).to.equal(1);
+            expect(bid.round).to.equal(1);
             expect(bid.protocolAddress).to.equal(protocolAddr);
 
             // 检查 nextProtocolId
-            expect(await auction.nextProtocolId()).to.equal(2);
+            expect(await auction.round()).to.equal(2);
             expect(await auction.getCurrentPrice()).to.equal(bidPrice1 * 2n);
             expect(await zkRocket.applications(1)).to.equal(protocolAddr);
 
@@ -241,11 +241,11 @@ describe("AuctionLauncher", function () {
             bid = await auction.bidRecords(2);
             expect(bid.buyer).to.equal(user2.address);
             expect(bid.price).to.equal(bidPrice2);
-            expect(bid.protocolId).to.equal(2);
+            expect(bid.round).to.equal(2);
             expect(bid.protocolAddress).to.equal(protocolAddr);
 
             // 检查 nextProtocolId
-            expect(await auction.nextProtocolId()).to.equal(3);
+            expect(await auction.round()).to.equal(3);
             expect(await auction.getCurrentPrice()).to.equal(bidPrice2 * 2n);
             expect(await zkRocket.applications(2)).to.equal(protocolAddr);
         });

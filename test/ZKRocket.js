@@ -72,31 +72,14 @@ describe("ZkRocket", function () {
         let bidPrice = await auction.getCurrentPrice() + 10n;
 
         await auction.connect(user1).bid(protocolAddr, bidPrice);
+
+        return
     }
 
     beforeEach(async function (){
         await loadFixture(deployContracts);
     });
 
-    /*
-    * 测试数据
-txid: 0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c
-
-//zkBTC 直接到 user address
-[1, "0x7ee2067f1b78df78daf9ae65248651d4e75585db2c1c880312d4919dc2d683d2", 10000000000000000000, "0x6a14dD870fA1b7C4700F2BD7f44238821C26f7392148", false]
-
-//zkRocket control's vaultAddress, protocolId = 1, userWithdraw=true, no application data
-[1, "0x7ee2067f1b78df78daf9ae65248651d4e75585db2c1c880312d4919dc2d683d2", 10000000000000000000, "0x6a2c43D218197E8c5FBC0527769821503660861c704500000101dD870fA1b7C4700F2BD7f44238821C26f7392148", false]
-
-//zkRocket control's vaultAddress, protocolId = 1, userWithdraw=false, no application data
-[1, "0x7ee2067f1b78df78daf9ae65248651d4e75585db2c1c880312d4919dc2d683d2", 10000000000000000000, "0x6a2c3c725134d74D5c45B4E4ABd2e5e2a109b554128800000100dD870fA1b7C4700F2BD7f44238821C26f7392148", false]
-
-//Not zkRocket control's vaultAddress, protocolId = 1, userWithdraw=false, no application data
-[1, "0x7ee2067f1b78df78daf9ae65248651d4e75585db2c1c880312d4919dc2d683d2", 10000000000000000000, "0x6a2c3c725134d74D5c45B4E4ABd2e5e2a109b554128800000100dD870fA1b7C4700F2BD7f44238821C26f7392148", false]
-
-
-    *
-    * */
     describe("retrieve", function () {
         const txid = "0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c";
         const blockHash = "0x7ee2067f1b78df78daf9ae65248651d4e75585db2c1c880312d4919dc2d683d2";
@@ -448,6 +431,21 @@ txid: 0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c
             let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
             expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+        });
+
+        it("admin register application directly", async function () {
+
+            expect(await zkRocket.nextProtocolId()).to.equal(2);
+
+            await zkRocket.registerApplication(await mockApp.getAddress());
+            expect(await zkRocket.nextProtocolId()).to.equal(3);
+            expect(await zkRocket.applications(2)).to.equal(await mockApp.getAddress());
+
+            await zkRocket.registerApplication(await mockApp.getAddress());
+            expect(await zkRocket.nextProtocolId()).to.equal(4);
+            expect(await zkRocket.applications(3)).to.equal(await mockApp.getAddress());
+
+
         });
 
     });

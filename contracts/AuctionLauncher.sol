@@ -13,7 +13,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     uint256 public duration;
     uint256 public minPrice;
     address public developer;
-    uint16 public nextProtocolId = 1;
+    uint16 public round = 1;
 
     IRegisterApplication public zkRocket;
 
@@ -24,7 +24,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     uint256 public auctionStartTime;
 
     struct BidRecord {
-        uint256 protocolId;
+        uint256 round;
         address protocolAddress;
         address buyer;
         uint256 price;
@@ -32,8 +32,8 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     }
     mapping (uint256 => BidRecord) public bidRecords;
 
-    event AuctionStarted(uint256 indexed protocolId, uint256 startPrice, uint256 startTime, uint256 duration);
-    event AuctionSuccess(uint256 indexed protocolId, address indexed protocolAddress, address indexed buyer,uint256 price, uint256 time);
+    event AuctionStarted(uint256 indexed round, uint256 startPrice, uint256 startTime, uint256 duration);
+    event AuctionSuccess(uint256 indexed round, address indexed protocolAddress, address indexed buyer,uint256 price, uint256 time);
     event MinPriceUpdated(uint256 oldMinPrice, uint256 newMinPrice);
     event DurationUpdated(uint256 oldDuration, uint256 newDuration);
     event DeveloperUpdated(address oldDeveloper, address newDeveloper);
@@ -71,7 +71,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         auctionMinPrice = minPrice;
         auctionDuration = duration;
         auctionStartTime = block.timestamp;
-        emit AuctionStarted(nextProtocolId, auctionStartPrice, auctionStartTime, duration);
+        emit AuctionStarted(round, auctionStartPrice, auctionStartTime, duration);
     }
 
     /// @notice 用户参与拍卖（先到先得）
@@ -83,27 +83,27 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         require(success, "Transfer failed");
 
         BidRecord memory _bid = BidRecord({
-            protocolId: nextProtocolId,
+            round: round,
             protocolAddress: _protocolAddress,
             buyer: msg.sender,
             price: _price,
             time: block.timestamp
         });
 
-        bidRecords[nextProtocolId] = _bid;
-        zkRocket.registerApplication(nextProtocolId, _protocolAddress);
-        emit AuctionSuccess(uint256(nextProtocolId), _protocolAddress, msg.sender, _price, block.timestamp);
+        bidRecords[round] = _bid;
+        zkRocket.registerApplication(_protocolAddress);
+        emit AuctionSuccess(uint256(round), _protocolAddress, msg.sender, _price, block.timestamp);
 
 
         // start next auction immediately
-        nextProtocolId++;
+        round++;
 
         // auctionStartPrice = max(newMinPrice, price *2)
         auctionStartPrice = _price * 2 >= minPrice ? _price * 2 : minPrice;
         auctionMinPrice = minPrice;
         auctionDuration = duration;
         auctionStartTime = block.timestamp;
-        emit AuctionStarted(nextProtocolId, auctionStartPrice, auctionStartTime, auctionDuration);
+        emit AuctionStarted(round, auctionStartPrice, auctionStartTime, auctionDuration);
     }
 
     /// TODO， bidWithPermit
@@ -160,5 +160,4 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         developer = _developer;
         emit DeveloperUpdated(old, developer);
     }
-
 }
