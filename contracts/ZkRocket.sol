@@ -9,7 +9,7 @@ import "./interfaces/IApplication.sol";
 import {IVault} from "./interfaces/IVault.sol";
 import "./interfaces/IZkBridge.sol";
 
-contract ZKRocket is AccessControl, ReentrancyGuard {
+contract ZkRocket is AccessControl, ReentrancyGuard {
     IERC20 public immutable zkBTC;
     uint256 public duration;
     uint256 public minPrice;
@@ -32,7 +32,7 @@ contract ZKRocket is AccessControl, ReentrancyGuard {
     event AuctionSuccess(uint256 indexed round, address indexed protocolAddress, address indexed buyer,uint256 price, uint256 time);
     event MinPriceUpdated(uint256 oldMinPrice, uint256 newMinPrice);
     event DurationUpdated(uint256 oldDuration, uint256 newDuration);
-    event DeveloperUpdated(address oldDeveloper, address newDeveloper);
+    event FeeRecipientUpdated(address oldFeeRecipient, address newFeeRecipient);
 
     event VaultAdded(address indexed vault);
     event VaultRemoved(address indexed vault);
@@ -221,7 +221,7 @@ contract ZKRocket is AccessControl, ReentrancyGuard {
         require(_feeRecipient != address(0), "Invalid developer address");
         address old = feeRecipient;
         feeRecipient = _feeRecipient;
-        emit DeveloperUpdated(old, feeRecipient);
+        emit FeeRecipientUpdated(old, feeRecipient);
     }
     /// @notice 添加新的 vault（仅限 admin)
     function addVault(IVault _vault) external onlyAdmin {
