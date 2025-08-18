@@ -4,6 +4,3 @@ interface IApplication {
     function execute(address _vault, address _user, bool _withdraw, uint256 _amount, bytes calldata _data) external;
 }
 
-interface IRegisterApplication {
-    function registerApplication(IApplication _protocolAddress) external;
-}
