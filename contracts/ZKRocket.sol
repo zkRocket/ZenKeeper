@@ -11,7 +11,7 @@ contract ZKRocket is AccessControl {
     address immutable public zkBTC;
     mapping(address => bool) public vaults;
     uint16 public nextProtocolId = 1;
-    mapping(uint16 => address) public applications;
+    mapping(uint16 => IApplication) public applications;
 
     /// @notice operator 角色标识
     bytes32 public constant AUCTION_LAUNCHER_ROLE = keccak256("AUCTION_LAUNCHER_ROLE");
@@ -48,14 +48,14 @@ contract ZKRocket is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-    /// @notice 添加新的 vault（仅限 admin）
+    /// @notice 添加新的 vault（仅限 admin）. TODO, change address to IVault
     function addVault(address _vault) external onlyAdmin {
         require(_vault.code.length > 0, "Invalid vault address");
         vaults[_vault] = true;
         emit VaultAdded(_vault);
     }
 
-    /// @notice 移除 vault（仅限 admin）
+    /// @notice 移除 vault（仅限 admin）. TODO, change address to IVault
     function removeVault(address _vault) external onlyAdmin {
         require(vaults[_vault], "Vault not found");
         delete vaults[_vault];
@@ -63,7 +63,7 @@ contract ZKRocket is AccessControl {
     }
 
     /// @notice auction launcher register application
-    function registerApplication(address _protocolAddress) external onlyAuctionLauncherOrAdmin {
+    function registerApplication(IApplication _protocolAddress) external onlyAuctionLauncherOrAdmin {
         require(_protocolAddress.code.length > 0, "Invalid application address");
         applications[nextProtocolId] = _protocolAddress;
         emit ApplicationRegistered(nextProtocolId, _protocolAddress);
@@ -110,13 +110,13 @@ contract ZKRocket is AccessControl {
         address vaultAddress;
         address userAddress;
 
-        assembly {
+        assembly { //TODO(ask tong)
             vaultAddress := shr(96, mload(add(add(data, 0x20), vaultAddressOffset)))
             userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 24))))
            }
 
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
-        bool withdraw = data[vaultAddressOffset + 23] != 0;
+        bool withdraw = data[vaultAddressOffset + 23] != 0; //TODO(get the bit0)
 
         bytes memory appData = sliceFrom(data, vaultAddressOffset+44);
 
@@ -125,7 +125,7 @@ contract ZKRocket is AccessControl {
         }
 
         if (applications[protocolId] != address(0)) {
-            IApplication(applications[protocolId]). execute(vaultAddress, userAddress, withdraw, _info.associatedAmount, appData);
+            IApplication(applications[protocolId]).execute(vaultAddress, userAddress, withdraw, _info.associatedAmount, appData);
         }
     }
 

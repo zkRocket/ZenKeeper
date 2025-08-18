@@ -12,7 +12,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     IERC20 public immutable token;
     uint256 public duration;
     uint256 public minPrice;
-    address public developer;
+    address public developer; //feeRecipient
     uint16 public round = 1;
 
     IRegisterApplication public zkRocket;
@@ -22,15 +22,6 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     uint256 public auctionMinPrice;
     uint256 public auctionStartPrice;
     uint256 public auctionStartTime;
-
-    struct BidRecord {
-        uint256 round;
-        address protocolAddress;
-        address buyer;
-        uint256 price;
-        uint256 time;
-    }
-    mapping (uint256 => BidRecord) public bidRecords;
 
     event AuctionStarted(uint256 indexed round, uint256 startPrice, uint256 startTime, uint256 duration);
     event AuctionSuccess(uint256 indexed round, address indexed protocolAddress, address indexed buyer,uint256 price, uint256 time);
@@ -75,25 +66,15 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     }
 
     /// @notice 用户参与拍卖（先到先得）
-    function bid(address _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
+    function bid(IApplication _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
         uint256 expectedPrice = getCurrentPrice();
-        require(_price >= expectedPrice, "pirce is lower than expected");
+        require(_price >= expectedPrice, "price is lower than expected");
 
         bool success = token.transferFrom(msg.sender, developer, _price);
         require(success, "Transfer failed");
 
-        BidRecord memory _bid = BidRecord({
-            round: round,
-            protocolAddress: _protocolAddress,
-            buyer: msg.sender,
-            price: _price,
-            time: block.timestamp
-        });
-
-        bidRecords[round] = _bid;
         zkRocket.registerApplication(_protocolAddress);
         emit AuctionSuccess(uint256(round), _protocolAddress, msg.sender, _price, block.timestamp);
-
 
         // start next auction immediately
         round++;
@@ -108,7 +89,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
 
     /// TODO， bidWithPermit
     function bidWithPermit(
-        address _protocolAddress,
+        IApplication _protocolAddress,
         uint256 _price,
         uint256 _deadline,
         uint8 _v,
@@ -125,7 +106,6 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
 
         bid(_protocolAddress, _price);
     }
-
 
     /// @notice 实时计算当前价格（线性下降）
     function getCurrentPrice() public view returns (uint256) {

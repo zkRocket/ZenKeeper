@@ -5,23 +5,19 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract Vault is AccessControl {
+    IERC20 public immutable zkBTC;
     /// @notice 用户余额：token => user => amount
-    mapping(address => mapping(address => uint256)) public balances;
-
-    /// @notice 支持的 ERC20 代币白名单
-    mapping(address => bool) public supportedTokens;
+    mapping(address => uint256) public balances;
 
     /// @notice operator 角色标识
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /// ---------- 事件 ----------
-    event Deposit(address indexed token, address indexed user, uint256 amount);
-    event Withdraw(address indexed token, address indexed user, uint256 amount);
+    event Deposit(address indexed user, uint256 amount);
+    event Withdraw(address indexed user, uint256 amount);
 
-    event Claim(address indexed token, address indexed user, uint256 amount);
+    event Claim(address indexed user, uint256 amount);
 
-    event TokenAdded(address indexed token);
-    event TokenRemoved(address indexed token);
 
     /// ---------- 修饰器 ----------
     modifier onlyAdmin() {
@@ -35,26 +31,15 @@ contract Vault is AccessControl {
     }
 
     /// @notice 构造函数：设置 admin 为部署者，初始化支持的 token
-    constructor(address[] memory _tokens) {
+    constructor(IERC20 _zkBTC) {
+        require(_zkBTC.code.length > 0, "Not a contract");
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-
-        for (uint256 i = 0; i < _tokens.length; i++) {
-            _addToken(_tokens[i]);
-        }
-    }
-
-    function _addToken(address _token) internal {
-        require(_token != address(0), "Invalid token");
-        require(!supportedTokens[_token], "Token already supported");
-        require(_token.code.length > 0, "Not a contract");
-        supportedTokens[_token] = true;
-        emit TokenAdded(_token);
+        zkBTC = _zkBTC;
     }
 
     /// ---------- 用户存款 ----------
-    function deposit(address _token, uint256 _amount) external {
-        require(supportedTokens[_token], "Token not supported");
-        require(_amount > 0, "Amount must be > 0");
+    function deposit(uint256 _amount) external {
+           require(_amount > 0, "Amount must be > 0");
 
         bool success = IERC20(_token).transferFrom(msg.sender, address(this), _amount);
         require(success, "Transfer failed");
