@@ -6,7 +6,7 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 
 describe("ZkRocket", function () {
-    let zkbtc, zkRocket, mockApp, auction, vault;
+    let zkBTC, zkRocket, mockApp, mockVault;
     let owner, developer, user1, user2;
     const big18 = BigInt(10) ** BigInt(18);
     const DURATION = 24 * 60 * 60;
@@ -19,61 +19,63 @@ describe("ZkRocket", function () {
         // Contracts are deployed using the first signer/account by default
         [owner, developer, user1, user2] = await ethers.getSigners();
 
-        const ZKBTC = await ethers.getContractFactory("MockZkBTC");
-        zkbtc = await ZKBTC.deploy();
-        await zkbtc.waitForDeployment();
+        const ZkBTC = await ethers.getContractFactory("MockZkBTC");
+        zkBTC = await ZkBTC.deploy();
+        await zkBTC.waitForDeployment();
 
-        const ZKRocket = await ethers.getContractFactory("ZKRocket");
-        zkRocket = await ZKRocket.deploy(await zkbtc.getAddress());
-        await zkRocket.waitForDeployment();
+
+        // const ZkRocket.sol = await ethers.getContractFactory("ZkRocket.sol");
+        // zkRocket = await ZkRocket.sol.deploy(await zkBTC.getAddress());
+        // await zkRocket.waitForDeployment();
 
         const MockApp = await ethers.getContractFactory("MockApp");
         mockApp = await MockApp.deploy();
         await mockApp.waitForDeployment();
 
-        const AuctionLauncher = await ethers.getContractFactory("AuctionLauncher");
-        auction = await AuctionLauncher.deploy(
-            await zkbtc.getAddress(),
+
+        const MockVault = await ethers.getContractFactory("MockVault");
+        mockVault = await MockVault.deploy(await zkBTC.getAddress());
+        await mockVault.waitForDeployment();
+
+
+        const ZkRocket = await ethers.getContractFactory("ZkRocket");
+        zkRocket = await ZkRocket.deploy(
+            await zkBTC.getAddress(),
             DURATION,
             MIN_PRICE,
             developer.address,
-            await zkRocket.getAddress()
         );
-        await auction.waitForDeployment();
+        await zkRocket.waitForDeployment();
 
-        const Vault = await ethers.getContractFactory("Vault");
-        vault = await Vault.deploy([await zkbtc.getAddress()]);
-        await vault.waitForDeployment();
 
-        await zkRocket.addVault(await vault.getAddress());
-        await zkbtc.mint(await vault.getAddress(), 1000n *big18);
-        expect(await zkbtc.balanceOf(await vault.getAddress())).to.equal(1000n * big18);
-        expect (await zkRocket.vaults(await vault.getAddress())).is.true;
 
-        await vault.grantRole(
-            await vault.OPERATOR_ROLE(),
+        await zkRocket.addVault(await mockVault.getAddress());
+        await zkBTC.mint(await mockVault.getAddress(), 1000n *big18);
+        expect(await zkBTC.balanceOf(await mockVault.getAddress())).to.equal(1000n * big18);
+        expect (await zkRocket.vaults(await mockVault.getAddress())).is.true;
+
+        await mockVault.grantRole(
+            await mockVault.OPERATOR_ROLE(),
             await zkRocket.getAddress()
         );
 
-        await zkRocket.grantRole(
-            await zkRocket.AUCTION_LAUNCHER_ROLE(),
-            await auction.getAddress()
-        );
+        // await zkRocket.grantRole(
+        //     await zkRocket.AUCTION_LAUNCHER_ROLE(),
+        //     await zkRocket.getAddress()
+        // );
 
         await zkRocket.grantRole(
             await zkRocket.BRIDGE_ROLE(),
             await owner.address
         );
 
-        await zkbtc.mint(user1.address, MIN_PRICE * 2n);
-        await zkbtc.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
+        await zkBTC.mint(user1.address, MIN_PRICE * 2n);
+        await zkBTC.connect(user1).approve(await zkRocket.getAddress(), MIN_PRICE * 2n);
 
         const protocolAddr = await mockApp.getAddress();
-        let bidPrice = await auction.getCurrentPrice() + 10n;
+        let bidPrice = await zkRocket.getCurrentPrice() + 10n;
 
-        await auction.connect(user1).bid(protocolAddr, bidPrice);
-
-        return
+        await zkRocket.connect(user1).bid(protocolAddr, bidPrice);
     }
 
     beforeEach(async function (){
@@ -101,7 +103,7 @@ describe("ZkRocket", function () {
          });
 
         it("to vault address， user withdraw， no app data", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "01" + owner.address.replace("0x", "")
             let len = (data.length/2).toString(16);
             data = "0x6a" + len + data;
@@ -114,21 +116,21 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(amount);
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(amount);
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(amount);
 
         });
 
         it("to vault address， user not withdraw， no app data", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "")
             let len = (data.length/2).toString(16);
             data = "0x6a" + len + data;
@@ -141,20 +143,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 31", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(31);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -169,20 +171,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 32", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(32);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -197,20 +199,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 211", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(211);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -225,20 +227,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 212", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(212);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -253,20 +255,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 213", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(213);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -281,20 +283,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 65491", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65491);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -309,20 +311,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 65492", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65492);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -337,20 +339,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 65493", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65493);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -365,20 +367,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， user not withdraw， appdata length= 132000", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(132000);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
@@ -393,20 +395,20 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("to vault address， no protocol, user not withdraw， appdata length= 132000", async function () {
-            let vaultAddress = await vault.getAddress();
+            let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(132000);
             let data=  vaultAddress.replace("0x", "") + "00" + "0000" + "00" + owner.address.replace("0x", "") +appData;
@@ -421,16 +423,16 @@ describe("ZkRocket", function () {
                 retrieved: false
             };
 
-            let balanceBefore = await zkbtc.balanceOf(await vault.getAddress());
-            expect(await zkbtc.balanceOf(await owner.address)).to.equal(0n);
+            let balanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
             ).to.not.emit(mockApp, "Execute");
 
-            let balanceAfter = await zkbtc.balanceOf(await vault.getAddress());
+            let balanceAfter = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkbtc.getAddress(), owner.address)).to.equal(amount);
+            expect(await mockVault.balances(owner.address)).to.equal(amount);
         });
 
         it("admin register application directly", async function () {
@@ -449,5 +451,4 @@ describe("ZkRocket", function () {
         });
 
     });
-
 });
