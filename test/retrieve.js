@@ -436,7 +436,6 @@ describe("ZkRocket", function () {
         });
 
         it("admin register application directly", async function () {
-
             expect(await zkRocket.nextProtocolId()).to.equal(2);
 
             await zkRocket.registerApplication(await mockApp.getAddress());
@@ -446,8 +445,26 @@ describe("ZkRocket", function () {
             await zkRocket.registerApplication(await mockApp.getAddress());
             expect(await zkRocket.nextProtocolId()).to.equal(4);
             expect(await zkRocket.applications(3)).to.equal(await mockApp.getAddress());
+        });
 
+        it("register application fail because of not admin", async function () {
+            expect(await zkRocket.nextProtocolId()).to.equal(2);
+            await expect(
+                zkRocket.connect(user1).registerApplication(await mockApp.getAddress())
+            ).to.be.revertedWith("Caller is not admin");
+            expect(await zkRocket.nextProtocolId()).to.equal(2);
+        });
 
+        it("add vault fail because of not admin", async function () {
+            await expect(
+                zkRocket.connect(user1).addVault(await mockApp.getAddress())
+            ).to.be.revertedWith("Caller is not admin");
+        });
+
+        it("remove vault fail because of not admin", async function () {
+            await expect(
+                zkRocket.connect(user1).removeVault(await mockApp.getAddress())
+            ).to.be.revertedWith("Caller is not admin");
         });
 
     });
