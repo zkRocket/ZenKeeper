@@ -282,6 +282,27 @@ describe("ZkRocket", function () {
                 user2.address
             );
         });
+
+        it("modify duration fail because not admin", async function () {
+            const newDuration = 48 * 60 * 60; // 48小时
+            await expect(
+                zkRocket.connect(user1).modifyDuration(newDuration)
+            ).to.be.revertedWith("Caller is not admin");
+        });
+
+        it("modify minPrice fail because not admin", async function () {
+            const newMinPrice = MIN_PRICE * 10n;
+            await expect(
+                zkRocket.connect(user1).modifyMinPrice(newMinPrice)
+            ).to.be.revertedWith("Caller is not admin");
+        });
+
+        it("modify feeRecipient fail because not admin", async function () {
+             await expect(
+                zkRocket.connect(user1).modifyFeeRecipient(user1.address)
+            ).to.be.revertedWith("Caller is not admin");
+        });
+
     });
 
 });
