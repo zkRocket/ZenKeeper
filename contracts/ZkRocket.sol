@@ -124,7 +124,7 @@ contract ZkRocket is Auction {
         address vaultAddress;
         address userAddress;
 
-        assembly { //TODO(ask tong)
+        assembly {
             vaultAddress := shr(96, mload(add(add(data, 0x20), vaultAddressOffset)))
             userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 24))))
         }
