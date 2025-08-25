@@ -6,8 +6,8 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 
 describe("AuctionLauncher", function () {
-    let zkbtc, zkRocket, mockApp, auction;
-    let owner, developer, user1, user2;
+    let zkBTC, zkLIT, zkRocket, mockApp, auction;
+    let owner, feeRecipient, user1, user2;
     const big18 = BigInt(10) ** BigInt(18);
     const DURATION = 24 * 60 * 60;
     const MIN_PRICE = 10n * big18;
@@ -18,15 +18,18 @@ describe("AuctionLauncher", function () {
     // and reset Hardhat Network to that snapshot in every test.
     async function deployContracts() {
         // Contracts are deployed using the first signer/account by default
-        [owner, developer, user1, user2] = await ethers.getSigners();
+        [owner, feeRecipient, user1, user2] = await ethers.getSigners();
 
-        const ZKBTC = await ethers.getContractFactory("MockZkBTC");
-        zkbtc = await ZKBTC.deploy();
-        await zkbtc.waitForDeployment();
+        const ZKBTC = await ethers.getContractFactory("MockZKBTC");
+        zkBTC = await ZKBTC.deploy();
+        await zkBTC.waitForDeployment();
 
+        const ZKLIT = await ethers.getContractFactory("MockZKLIT");
+        zkLIT = await ZKLIT.deploy();
+        await zkLIT.waitForDeployment();
 
         const ZKRocket = await ethers.getContractFactory("ZKRocket");
-        zkRocket = await ZKRocket.deploy(await zkbtc.getAddress());
+        zkRocket = await ZKRocket.deploy(await zkBTC.getAddress(), await zkLIT.getAddress());
         await zkRocket.waitForDeployment();
 
         const MockApp = await ethers.getContractFactory("MockApp");
@@ -35,10 +38,10 @@ describe("AuctionLauncher", function () {
 
         const AuctionLauncher = await ethers.getContractFactory("AuctionLauncher");
         auction = await AuctionLauncher.deploy(
-            await zkbtc.getAddress(),
+            await zkBTC.getAddress(),
             DURATION,
             MIN_PRICE,
-            developer.address,
+            feeRecipient.address,
             await zkRocket.getAddress()
         );
         await auction.waitForDeployment();
@@ -62,11 +65,12 @@ describe("AuctionLauncher", function () {
         it("deploy contracts ", async function () {
             expect(await auction.duration()).to.equal(DURATION);
             expect(await auction.minPrice()).to.equal(MIN_PRICE);
-            expect(await auction.developer()).to.equal(developer.address);
+            expect(await auction.feeRecipient()).to.equal(feeRecipient.address);
             expect(await auction.zkRocket()).to.equal(await zkRocket.getAddress());
-            expect(await auction.token()).to.equal(await zkbtc.getAddress());
+            expect(await auction.zkBTC()).to.equal(await zkBTC.getAddress());
 
-            expect(await zkRocket.zkBTC()).to.equal(await zkbtc.getAddress());
+            expect(await zkRocket.zkBTC()).to.equal(await zkBTC.getAddress());
+            expect(await zkRocket.zkLIT()).to.equal(await zkLIT.getAddress());
             expect(await zkRocket.hasRole(await zkRocket.AUCTION_LAUNCHER_ROLE(), auction.getAddress())).is.true;
             expect(await zkRocket.hasRole(await zkRocket.BRIDGE_ROLE(), owner.address)).is.true;
         });
@@ -113,8 +117,8 @@ describe("AuctionLauncher", function () {
 
         it("bid in auction duration", async function () {
             //user1 bid protocolId = 1
-            await zkbtc.mint(user1.address, MIN_PRICE * 2n);
-            await zkbtc.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
+            await zkBTC.mint(user1.address, MIN_PRICE * 2n);
+            await zkBTC.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
 
             const protocolAddr = await mockApp.getAddress();
             let bidPrice1 = await auction.getCurrentPrice() + 10n;
@@ -130,15 +134,8 @@ describe("AuctionLauncher", function () {
                     anyValue // time
                 );
 
-            // 检查代币确实转给了 developer
-            expect(await zkbtc.balanceOf(developer.address)).to.equal(bidPrice1);
-
-            // 检查 bidRecords 保存正确
-            let bid = await auction.bidRecords(1);
-            expect(bid.buyer).to.equal(user1.address);
-            expect(bid.price).to.equal(bidPrice1);
-            expect(bid.round).to.equal(1);
-            expect(bid.protocolAddress).to.equal(protocolAddr);
+            // 检查代币确实转给了 feeRecipient
+            expect(await zkBTC.balanceOf(feeRecipient.address)).to.equal(bidPrice1);
 
             // 检查 nextProtocolId
             expect(await auction.round()).to.equal(2);
@@ -146,8 +143,8 @@ describe("AuctionLauncher", function () {
             expect(await zkRocket.applications(1)).to.equal(protocolAddr);
 
             //user1 bid protocolId = 2
-            await zkbtc.mint(user2.address, bidPrice1 * 2n);
-            await zkbtc.connect(user2).approve(await auction.getAddress(), bidPrice1 * 2n);
+            await zkBTC.mint(user2.address, bidPrice1 * 2n);
+            await zkBTC.connect(user2).approve(await auction.getAddress(), bidPrice1 * 2n);
 
             const halfTime = Number(await auction.auctionDuration()) / 2;
             await time.increase(halfTime);
@@ -164,15 +161,8 @@ describe("AuctionLauncher", function () {
                     anyValue // time
                 );
 
-            // 检查代币确实转给了 developer
-            expect(await zkbtc.balanceOf(developer.address)).to.equal(bidPrice1 + bidPrice2);
-
-            // 检查 bidRecords 保存正确
-             bid = await auction.bidRecords(2);
-            expect(bid.buyer).to.equal(user2.address);
-            expect(bid.price).to.equal(bidPrice2);
-            expect(bid.round).to.equal(2);
-            expect(bid.protocolAddress).to.equal(protocolAddr);
+            // 检查代币确实转给了 feeRecipient
+            expect(await zkBTC.balanceOf(feeRecipient.address)).to.equal(bidPrice1 + bidPrice2);
 
             // 检查 nextProtocolId
             expect(await auction.round()).to.equal(3);
@@ -183,8 +173,8 @@ describe("AuctionLauncher", function () {
 
         it("bid after auction duration", async function () {
             //user1 bid protocolId = 1
-            await zkbtc.mint(user1.address, MIN_PRICE * 2n);
-            await zkbtc.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
+            await zkBTC.mint(user1.address, MIN_PRICE * 2n);
+            await zkBTC.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
 
             const protocolAddr = await mockApp.getAddress();
             let bidPrice1 = await auction.getCurrentPrice() + 10n;
@@ -200,15 +190,8 @@ describe("AuctionLauncher", function () {
                     anyValue // time
                 );
 
-            // 检查代币确实转给了 developer
-            expect(await zkbtc.balanceOf(developer.address)).to.equal(bidPrice1);
-
-            // 检查 bidRecords 保存正确
-            let bid = await auction.bidRecords(1);
-            expect(bid.buyer).to.equal(user1.address);
-            expect(bid.price).to.equal(bidPrice1);
-            expect(bid.round).to.equal(1);
-            expect(bid.protocolAddress).to.equal(protocolAddr);
+            // 检查代币确实转给了 feeRecipient
+            expect(await zkBTC.balanceOf(feeRecipient.address)).to.equal(bidPrice1);
 
             // 检查 nextProtocolId
             expect(await auction.round()).to.equal(2);
@@ -216,8 +199,8 @@ describe("AuctionLauncher", function () {
             expect(await zkRocket.applications(1)).to.equal(protocolAddr);
 
             //user1 bid protocolId = 2
-            await zkbtc.mint(user2.address, bidPrice1 * 2n);
-            await zkbtc.connect(user2).approve(await auction.getAddress(), bidPrice1 * 2n);
+            await zkBTC.mint(user2.address, bidPrice1 * 2n);
+            await zkBTC.connect(user2).approve(await auction.getAddress(), bidPrice1 * 2n);
 
             await time.increase(await auction.auctionDuration() + 10n);
             let bidPrice2 = await auction.getCurrentPrice();
@@ -234,15 +217,8 @@ describe("AuctionLauncher", function () {
                     anyValue // time
                 );
 
-            // 检查代币确实转给了 developer
-            expect(await zkbtc.balanceOf(developer.address)).to.equal(bidPrice1 + bidPrice2);
-
-            // 检查 bidRecords 保存正确
-            bid = await auction.bidRecords(2);
-            expect(bid.buyer).to.equal(user2.address);
-            expect(bid.price).to.equal(bidPrice2);
-            expect(bid.round).to.equal(2);
-            expect(bid.protocolAddress).to.equal(protocolAddr);
+            // 检查代币确实转给了 feeRecipient
+            expect(await zkBTC.balanceOf(feeRecipient.address)).to.equal(bidPrice1 + bidPrice2);
 
             // 检查 nextProtocolId
             expect(await auction.round()).to.equal(3);
@@ -265,8 +241,8 @@ describe("AuctionLauncher", function () {
             expect(await auction.auctionDuration()).to.equal(DURATION);
 
             // current auction will not be affected
-            await zkbtc.mint(user1.address, MIN_PRICE * 2n);
-            await zkbtc.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
+            await zkBTC.mint(user1.address, MIN_PRICE * 2n);
+            await zkBTC.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
             const protocolAddr = await mockApp.getAddress();
             await auction.connect(user1).bid(protocolAddr, await auction.getCurrentPrice());
 
@@ -287,8 +263,8 @@ describe("AuctionLauncher", function () {
             expect(await auction.auctionMinPrice()).to.equal(MIN_PRICE);
 
             // current auction will not be affected
-            await zkbtc.mint(user1.address, MIN_PRICE * 2n);
-            await zkbtc.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
+            await zkBTC.mint(user1.address, MIN_PRICE * 2n);
+            await zkBTC.connect(user1).approve(await auction.getAddress(), MIN_PRICE * 2n);
             const protocolAddr = await mockApp.getAddress();
             await auction.connect(user1).bid(protocolAddr, await auction.getCurrentPrice());
 
@@ -296,11 +272,11 @@ describe("AuctionLauncher", function () {
             expect(await auction.auctionMinPrice()).to.equal(newMinPrice);
         });
 
-        it ("modify developer", async function () {
+        it ("modify feeRecipient", async function () {
             await expect(
-                auction.connect(owner).modifyDeveloper(user2.address)
-            ).to.emit(auction, "DeveloperUpdated").
-            withArgs(developer.address,
+                auction.connect(owner).modifyFeeRecipient(user2.address)
+            ).to.emit(auction, "FeeRecipientUpdated").
+            withArgs(feeRecipient.address,
                 user2.address
             );
         });
