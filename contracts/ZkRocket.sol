@@ -31,47 +31,7 @@ contract ZkRocket is Auction {
     }
 
 
-    /// @notice 用户参与拍卖（先到先得）
-    function bid(IApplication _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
-        uint256 expectedPrice = getCurrentPrice();
-        require(_price >= expectedPrice, "price is lower than expected");
 
-        bool success = zkBTC.transferFrom(msg.sender, feeRecipient, _price);
-        require(success, "Transfer failed");
-
-        _registerApplication(_protocolAddress);
-        emit AuctionSuccess(uint256(round), address(_protocolAddress), msg.sender, _price, block.timestamp);
-
-        // start next auction immediately
-        round++;
-
-        // auctionStartPrice = max(newMinPrice, price *2)
-        auctionStartPrice = _price * 2 >= minPrice ? _price * 2 : minPrice;
-        auctionMinPrice = minPrice;
-        auctionDuration = duration;
-        auctionStartTime = block.timestamp;
-        emit AuctionStarted(round, auctionStartPrice, auctionStartTime, auctionDuration);
-    }
-
-    /// TODO， bidWithPermit
-    function bidWithPermit(
-        IApplication _protocolAddress,
-        uint256 _price,
-        uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) external auctionOngoing nonReentrant {
-        IERC20Permit(address(zkBTC)).permit(
-            msg.sender,
-            address(this),
-            _price,
-            _deadline,
-            _v, _r, _s
-        );
-
-        bid(_protocolAddress, _price);
-    }
 
 
     /// @notice auction launcher register application
@@ -87,7 +47,7 @@ contract ZkRocket is Auction {
 
     /// @notice  only zkBridge
     /*           | <--------------------------------at least 46 bytes ----------------------------------->|
-    fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId  userOption userAddress  appData
+    fields:       OP_RETURN opcode     length     addressA       chainId  protocolId  userOption  addressB  appData
     length(bytes):    1        1       0/1/2/4        20            1           2          1          20
     */
 
@@ -135,7 +95,8 @@ contract ZkRocket is Auction {
         bytes memory appData = sliceFrom(data, vaultAddressOffset+44);
 
         if (vaults[vaultAddress]) {
-            IVault(vaultAddress).claim(userAddress, _info.associatedAmount, withdraw);
+            IVault(vaultAddress).claim(zkBTC, userAddress, _info.associatedAmount, withdraw);
+            IVault(vaultAddress).claim(zkLIT, userAddress, _info.associatedAmount, withdraw); //TODO(L2Token amount)
         }
 
         if (address(applications[protocolId]) != address(0)) {

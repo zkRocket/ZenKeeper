@@ -11,6 +11,7 @@ import "./interfaces/IZkBridge.sol";
 
 contract Auction is AccessControl, ReentrancyGuard {
     IERC20 public immutable zkBTC;
+    IERC20 public immutable zkLIT;
     uint256 public duration;
     uint256 public minPrice;
     address public feeRecipient;
@@ -38,11 +39,12 @@ contract Auction is AccessControl, ReentrancyGuard {
         _;
     }
 
-    constructor(IERC20 _zkBTC, uint256 _duration, uint256 _minPrice, address _feeRecipient) {
+    constructor(IERC20 _zkBTC, IERC20 _zkLIT, uint256 _duration, uint256 _minPrice, address _feeRecipient) {
         require(_duration > 0, "Invalid duration");
         require(_minPrice > 0, "Invalid minPrice");
         require(_feeRecipient != address(0), "Invalid developer address");
         zkBTC = _zkBTC;
+        zkLIT = _zkLIT;
         duration = _duration;
         minPrice = _minPrice;
         feeRecipient = _feeRecipient;
@@ -69,6 +71,47 @@ contract Auction is AccessControl, ReentrancyGuard {
         return auctionStartPrice - discount;
     }
 
+    /// @notice 用户参与拍卖（先到先得）
+    function bid(IApplication _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
+        uint256 expectedPrice = getCurrentPrice();
+        require(_price >= expectedPrice, "price is lower than expected");
+
+        bool success = zkBTC.transferFrom(msg.sender, feeRecipient, _price);
+        require(success, "Transfer failed");
+
+        _registerApplication(_protocolAddress);
+        emit AuctionSuccess(uint256(round), address(_protocolAddress), msg.sender, _price, block.timestamp);
+
+        // start next auction immediately
+        round++;
+
+        // auctionStartPrice = max(newMinPrice, price *2)
+        auctionStartPrice = _price * 2 >= minPrice ? _price * 2 : minPrice;
+        auctionMinPrice = minPrice;
+        auctionDuration = duration;
+        auctionStartTime = block.timestamp;
+        emit AuctionStarted(round, auctionStartPrice, auctionStartTime, auctionDuration);
+    }
+
+    /// TODO， bidWithPermit
+    function bidWithPermit(
+        IApplication _protocolAddress,
+        uint256 _price,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external auctionOngoing nonReentrant {
+        IERC20Permit(address(zkBTC)).permit(
+            msg.sender,
+            address(this),
+            _price,
+            _deadline,
+            _v, _r, _s
+        );
+
+        bid(_protocolAddress, _price);
+    }
 
     //modify duration, will be applied to next auction
     function modifyDuration(uint256 _duration) external onlyAdmin {
