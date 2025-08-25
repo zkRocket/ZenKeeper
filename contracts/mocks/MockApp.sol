@@ -5,9 +5,9 @@ import "../interfaces/IApplication.sol";
 contract MockApp is IApplication {
     constructor(){}
 
-    event Execute(address indexed _vault, address indexed _user, bool _withdraw, uint256 _amount, bytes _data);
+    event Execute(address indexed _vault, address indexed _user, uint256 _amount);
 
-    function execute(address _vault, address _user, bool _withdraw, uint256 _amount, bytes calldata _data) external {
-        emit Execute(_vault, _user, _withdraw, _amount, _data);
+    function execute(address _vault, address _user, uint256 _amount, ProvenData calldata _data) external {
+        emit Execute(_vault, _user, _amount);
     }
 }

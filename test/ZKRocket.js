@@ -6,9 +6,11 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 
 describe("ZkRocket", function () {
-    let zkBTC, zkLIT, zkRocket, mockApp, auction, vault;
+    let zkBTC, zkLIT, zkRocket, mockApp, mockFeePool,auction, vault;
     let owner, feeRecipient, user1, user2;
     const big18 = BigInt(10) ** BigInt(18);
+    const big10 = BigInt(10) ** BigInt(10);
+    const big8 = BigInt(10) ** BigInt(8);
     const DURATION = 24 * 60 * 60;
     const MIN_PRICE = 10n * big18;
 
@@ -27,8 +29,12 @@ describe("ZkRocket", function () {
         zkLIT = await ZKLIT.deploy();
         await zkLIT.waitForDeployment();
 
+        const MockFeePool = await ethers.getContractFactory("MockFeePool");
+        mockFeePool = await MockFeePool.deploy();
+        await mockFeePool.waitForDeployment();
+
         const ZKRocket = await ethers.getContractFactory("ZKRocket");
-        zkRocket = await ZKRocket.deploy(await zkBTC.getAddress(), await zkLIT.getAddress());
+        zkRocket = await ZKRocket.deploy(await zkBTC.getAddress(), await zkLIT.getAddress(), await mockFeePool.getAddress());
         await zkRocket.waitForDeployment();
 
         const MockApp = await ethers.getContractFactory("MockApp");
@@ -53,6 +59,8 @@ describe("ZkRocket", function () {
         await zkBTC.mint(await vault.getAddress(), 1000n *big18);
         expect(await zkBTC.balanceOf(await vault.getAddress())).to.equal(1000n * big18);
         expect (await zkRocket.vaults(await vault.getAddress())).is.true;
+        await zkLIT.mint(await vault.getAddress(), 100000n *big18);
+        expect(await zkLIT.balanceOf(await vault.getAddress())).to.equal(100000n * big18);
 
         await vault.grantRole(
             await vault.OPERATOR_ROLE(),
@@ -86,14 +94,14 @@ describe("ZkRocket", function () {
     describe("retrieve", function () {
         const txid = "0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c";
         const blockHash = "0x7ee2067f1b78df78daf9ae65248651d4e75585db2c1c880312d4919dc2d683d2";
-        const amount = 10n * big18;
+        const amount = 10n * big8;
 
         it("to user address", async function () {
             let data = "0x6a14" + owner.address.replace("0x", "")
             const provenData = {
                 index: 1,
                 blockHash: txid,
-                associatedAmount: amount, // 10 * 1e18
+                associatedAmount: amount, // 10 * 1e8
                 data: data,
                 retrieved: false
             };
@@ -105,7 +113,7 @@ describe("ZkRocket", function () {
 
         it("to vault address， user withdraw， no app data", async function () {
             let vaultAddress = await vault.getAddress();
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "01" + owner.address.replace("0x", "")
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
             let len = (data.length/2).toString(16);
             data = "0x6a" + len + data;
 
@@ -132,35 +140,7 @@ describe("ZkRocket", function () {
 
         it("to vault address， user not withdraw， no app data", async function () {
             let vaultAddress = await vault.getAddress();
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "")
-            let len = (data.length/2).toString(16);
-            data = "0x6a" + len + data;
-
-            const provenData = {
-                index: 1,
-                blockHash: txid,
-                associatedAmount: amount, // 10 * 1e18
-                data: data,
-                retrieved: false
-            };
-
-            let balanceBefore = await zkBTC.balanceOf(await vault.getAddress());
-            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
-
-            await expect(
-                zkRocket.retrieve(provenData, txid)
-            ).to.emit(mockApp, "Execute");
-
-            let balanceAfter = await zkBTC.balanceOf(await vault.getAddress());
-            expect(balanceBefore - balanceAfter).to.equal(0n);
-            expect(await vault.balances(await zkBTC.getAddress(), owner.address)).to.equal(amount);
-        });
-
-        it("to vault address， user not withdraw， appdata length= 31", async function () {
-            let vaultAddress = await vault.getAddress();
-            // 构造 29 bytes 的 appData，填充 0
-            let appData = "55".repeat(31);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001"  + owner.address.replace("0x", "")
             let len = (data.length/2).toString(16);
             data = "0x6a" + len + data;
 
@@ -188,9 +168,9 @@ describe("ZkRocket", function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(32);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
             let len = (data.length/2).toString(16);
-            data = "0x6a4c" + len + data;
+            data = "0x6a" + len + data;
 
             const provenData = {
                 index: 1,
@@ -212,11 +192,11 @@ describe("ZkRocket", function () {
             expect(await vault.balances(await zkBTC.getAddress(), owner.address)).to.equal(amount);
         });
 
-        it("to vault address， user not withdraw， appdata length= 211", async function () {
+        it("to vault address， user not withdraw， appdata length= 33", async function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
-            let appData = "55".repeat(211);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
+            let appData = "55".repeat(33);
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
             let len = (data.length/2).toString(16);
             data = "0x6a4c" + len + data;
 
@@ -244,9 +224,9 @@ describe("ZkRocket", function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(212);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
-            let len = (data.length/2).toString(16).padStart(4, "0");;
-            data = "0x6a4d" + len + data;
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001"  + owner.address.replace("0x", "") +appData;
+            let len = (data.length/2).toString(16);
+            data = "0x6a4c" + len + data;
 
             const provenData = {
                 index: 1,
@@ -272,7 +252,7 @@ describe("ZkRocket", function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(213);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001"  + owner.address.replace("0x", "") +appData;
             let len = (data.length/2).toString(16).padStart(4, "0");;
             data = "0x6a4d" + len + data;
 
@@ -296,11 +276,11 @@ describe("ZkRocket", function () {
             expect(await vault.balances(await zkBTC.getAddress(), owner.address)).to.equal(amount);
         });
 
-        it("to vault address， user not withdraw， appdata length= 65491", async function () {
+        it("to vault address， user not withdraw， appdata length= 214", async function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
-            let appData = "55".repeat(65491);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
+            let appData = "55".repeat(214);
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
             let len = (data.length/2).toString(16).padStart(4, "0");;
             data = "0x6a4d" + len + data;
 
@@ -328,9 +308,9 @@ describe("ZkRocket", function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65492);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
-            let len = (data.length/2).toString(16).padStart(8, "0");;
-            data = "0x6a4e" + len + data;
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001"  + owner.address.replace("0x", "") +appData;
+            let len = (data.length/2).toString(16).padStart(4, "0");;
+            data = "0x6a4d" + len + data;
 
             const provenData = {
                 index: 1,
@@ -356,7 +336,7 @@ describe("ZkRocket", function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65493);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
             let len = (data.length/2).toString(16).padStart(8, "0");;
             data = "0x6a4e" + len + data;
 
@@ -380,11 +360,11 @@ describe("ZkRocket", function () {
             expect(await vault.balances(await zkBTC.getAddress(), owner.address)).to.equal(amount);
         });
 
-        it("to vault address， user not withdraw， appdata length= 132000", async function () {
+        it("to vault address， user not withdraw， appdata length= 65494", async function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
-            let appData = "55".repeat(132000);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + "00" + owner.address.replace("0x", "") +appData;
+            let appData = "55".repeat(65494);
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
             let len = (data.length/2).toString(16).padStart(8, "0");;
             data = "0x6a4e" + len + data;
 
@@ -408,11 +388,39 @@ describe("ZkRocket", function () {
             expect(await vault.balances(await zkBTC.getAddress(), owner.address)).to.equal(amount);
         });
 
-        it("to vault address， no protocol, user not withdraw， appdata length= 132000", async function () {
+        it("to vault address， user not withdraw， appdata length= 132001", async function () {
             let vaultAddress = await vault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
-            let appData = "55".repeat(132000);
-            let data=  vaultAddress.replace("0x", "") + "00" + "0000" + "00" + owner.address.replace("0x", "") +appData;
+            let appData = "55".repeat(132001);
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
+            let len = (data.length/2).toString(16).padStart(8, "0");
+            data = "0x6a4e" + len + data;
+
+            const provenData = {
+                index: 1,
+                blockHash: txid,
+                associatedAmount: amount, // 10 * 1e18
+                data: data,
+                retrieved: false
+            };
+
+            let balanceBefore = await zkBTC.balanceOf(await vault.getAddress());
+            expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
+
+            await expect(
+                zkRocket.retrieve(provenData, txid)
+            ).to.emit(mockApp, "Execute");
+
+            let balanceAfter = await zkBTC.balanceOf(await vault.getAddress());
+            expect(balanceBefore - balanceAfter).to.equal(0n);
+            expect(await vault.balances(await zkBTC.getAddress(), owner.address)).to.equal(amount);
+        });
+
+        it("to vault address， no protocol, user not withdraw， appdata length= 132001", async function () {
+            let vaultAddress = await vault.getAddress();
+            // 构造 29 bytes 的 appData，填充 0
+            let appData = "55".repeat(132001);
+            let data=  vaultAddress.replace("0x", "") + "00" + "0000" + owner.address.replace("0x", "") +appData;
             let len = (data.length/2).toString(16).padStart(8, "0");;
             data = "0x6a4e" + len + data;
 
@@ -471,6 +479,263 @@ describe("ZkRocket", function () {
             ).to.be.revertedWith("Caller is not auction launcher or admin");
             expect(await zkRocket.nextProtocolId()).to.equal(2);
         });
+    });
+
+    describe("LIT calculation", () => {
+        it("LIT calculation, totalBridgeAmount = 0", async function () {
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(0n);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(128n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(256n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(128n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 10254*big8-1", async function () {
+            let amount = 10254n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(128n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(256n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(128n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 10254*big8", async function () {
+            let amount = 10254n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(64n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(128n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(64n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 164062*big8-1", async function () {
+            let amount = 164062n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(64n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(128n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(64n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 164062*big8", async function () {
+            let amount = 164062n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(32n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(64n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(32n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 1312500*big8-1", async function () {
+            let amount = 1312500n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(32n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(64n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(32n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 1312500*big8", async function () {
+            let amount = 1312500n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(16n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(32n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(16n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 2625000*big8-1", async function () {
+            let amount = 2625000n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(16n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(32n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(16n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 2625000*big8", async function () {
+            let amount = 2625000n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(8n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(16n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(8n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 5250000*big8-1", async function () {
+            let amount = 5250000n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(8n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(16n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(8n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 5250000*big8", async function () {
+            let amount = 5250000n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(4n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(8n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(4n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 10500000*big8-1", async function () {
+            let amount = 10500000n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(4n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(8n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(4n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 10500000*big8", async function () {
+            let amount = 10500000n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(2n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(4n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(2n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 21000000*big8-1", async function () {
+            let amount = 21000000n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(2n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(4n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(2n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 21000000*big8", async function () {
+            let amount = 21000000n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(1n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(2n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(1n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 42000000*big8-1", async function () {
+            let amount = 42000000n*big8-1n;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(1n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(2n*big18);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(1n*big10);
+        });
+
+        it("LIT calculation, totalBridgeAmount = 42000000*big8", async function () {
+            let amount = 42000000n*big8;
+            await mockFeePool.setTotalBridgeAmount(amount);
+            let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
+            expect(totalBridgeAmount).to.equal(amount);
+            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            expect (litAmount).to.equal(0n);
+
+            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            expect (litAmount).to.equal(0n);
+
+            litAmount = await zkRocket.calculateLITAmount(1);
+            expect (litAmount).to.equal(0n);
+        });
+
 
     });
+
 });

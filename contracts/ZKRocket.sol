@@ -1,19 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./interfaces/IZKBridge.sol";
+import "./interfaces/IZKRocket.sol";
 import "./interfaces/IVault.sol";
-import "./interfaces/IApplication.sol";
+import "./interfaces/IFeePool.sol";
 import "hardhat/console.sol";
 
+
 contract ZKRocket is AccessControl {
-    IERC20 immutable public zkBTC;
-    IERC20 immutable public zkLIT;
+    IERC20Metadata immutable public zkBTC;
+    IERC20Metadata immutable public zkLIT;
+    uint256 public zkBTCDecimals;
+    uint256 public zkLITDecimals;
+
+    IFeePool immutable public feePool;
     mapping(address => bool) public vaults;
     uint16 public nextProtocolId = 1;
     mapping(uint16 => IApplication) public applications;
+    uint256[2][8] public litMintTable;
 
     /// @notice operator 角色标识
     bytes32 public constant AUCTION_LAUNCHER_ROLE = keccak256("AUCTION_LAUNCHER_ROLE");
@@ -44,9 +51,22 @@ contract ZKRocket is AccessControl {
         _;
     }
 
-    constructor(IERC20 _zkBTC, IERC20 _zkLIT) {
+    constructor(IERC20Metadata _zkBTC, IERC20Metadata _zkLIT, IFeePool _feePool) {
         zkBTC = _zkBTC;
         zkLIT = _zkLIT;
+        feePool = _feePool;
+        zkBTCDecimals = zkBTC.decimals();
+        zkLITDecimals = zkLIT.decimals();
+        uint256 decimalsDiff = zkLITDecimals - zkBTCDecimals;
+
+        litMintTable[0] = [uint256(10254*10**zkBTCDecimals), 128*10**decimalsDiff];
+        litMintTable[1] = [uint256(164062*10**zkBTCDecimals), 64*10**decimalsDiff];
+        litMintTable[2] = [uint256(1312500*10**zkBTCDecimals), 32*10**decimalsDiff];
+        litMintTable[3] = [uint256(2625000*10**zkBTCDecimals), 16*10**decimalsDiff];
+        litMintTable[4] = [uint256(5250000*10**zkBTCDecimals), 8*10**decimalsDiff];
+        litMintTable[5] = [uint256(10500000*10**zkBTCDecimals), 4*10**decimalsDiff];
+        litMintTable[6] = [uint256(21000000*10**zkBTCDecimals), 2*10**decimalsDiff];
+        litMintTable[7] = [uint256(42000000*10**zkBTCDecimals), 1*10**decimalsDiff]; //<=
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -72,13 +92,13 @@ contract ZKRocket is AccessControl {
      }
 
     /// @notice  only zkBridge
-    /*           | <--------------------------------at least 46 bytes ----------------------------------->|
-    fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId  userOption userAddress  appData
-    length(bytes):    1        1       0/1/2/4        20            1           2          1          20
+    /*           | <--------------------------------at least 45 bytes ------------------------->|
+    fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId   userAddress  appData
+    length(bytes):    1        1       0/1/2/4        20            1           2         20
     */
 
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
-        if (_info.data.length < 46){
+        if (_info.data.length < 45){
             return;
         }
 
@@ -89,7 +109,7 @@ contract ZKRocket is AccessControl {
             //data[0]=OP_RETURN,
             uint256 l;
             uint8 opcode = uint8(data[1]);
-            if (0x2c <= opcode && opcode <= 0x4B) { //44 ~75
+            if (0x2B <= opcode && opcode <= 0x4B) { //43 ~75
                 l = opcode;
                 vaultAddressOffset = 2;
             } else if (opcode == 0x4c) {
@@ -113,21 +133,22 @@ contract ZKRocket is AccessControl {
 
         assembly {
             vaultAddress := shr(96, mload(add(add(data, 0x20), vaultAddressOffset)))
-            userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 24))))
+            userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 23))))
            }
 
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
-        bool withdraw = data[vaultAddressOffset + 23] != 0;
-
-        bytes memory appData = sliceFrom(data, vaultAddressOffset+44);
 
         if (vaults[vaultAddress]) {
-            IVault(vaultAddress).claim(zkBTC, userAddress, _info.associatedAmount, withdraw);
-            // IVault(vaultAddress).claim(zkLIT, userAddress, _info.associatedAmount, withdraw); //TODO(L2Token amount)
+            IVault(vaultAddress).claimZKBTC(userAddress, _info.associatedAmount);
+        }
+
+        if (address(applications[protocolId]) != vaultAddress) {
+            uint256 litAmount = calculateLITAmount(_info.associatedAmount);
+            IVault(vaultAddress).claimZKLIT(address(applications[protocolId]), litAmount);
         }
 
         if (address(applications[protocolId]) != address(0)) {
-            IApplication(applications[protocolId]). execute(vaultAddress, userAddress, withdraw, _info.associatedAmount, appData);
+            IApplication(applications[protocolId]). execute(vaultAddress, userAddress, _info.associatedAmount, _info);
         }
     }
 
@@ -146,4 +167,22 @@ contract ZKRocket is AccessControl {
             }
         }
     }
+
+    function calculateLITAmount(uint256 _zkBTCAmount) public view returns (uint256) {
+        uint256 totalBridgeAmount = feePool.totalBridgeAmount();
+
+        uint256 multiplier = 0;
+        for (uint i = 0; i < litMintTable.length; i++) {
+            if (totalBridgeAmount < litMintTable[i][0]) {
+                multiplier = litMintTable[i][1];
+                break;
+            }
+        }
+        if (multiplier == 0) {
+            return 0;
+        }else {
+            return _zkBTCAmount * multiplier;
+        }
+    }
+
 }
