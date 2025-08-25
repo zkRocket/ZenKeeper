@@ -453,4 +453,24 @@ describe("ZkRocket", function () {
 
     });
 
+    describe("register application by admin", () => {
+        it("register application by admin", async function () {
+            expect(await zkRocket.nextProtocolId()).to.equal(2);
+            await expect(
+                zkRocket.connect(owner).registerApplication(await mockApp.getAddress())
+            ).to.emit(zkRocket, "ApplicationRegistered")
+                .withArgs(2, await mockApp.getAddress());
+            expect(await zkRocket.nextProtocolId()).to.equal(3);
+            expect(await zkRocket.applications(2)).to.equal(await mockApp.getAddress());
+        });
+
+        it("register application by not admin", async function () {
+            expect(await zkRocket.nextProtocolId()).to.equal(2);
+            await expect(
+                zkRocket.connect(user1).registerApplication(await mockApp.getAddress())
+            ).to.be.revertedWith("Caller is not auction launcher or admin");
+            expect(await zkRocket.nextProtocolId()).to.equal(2);
+        });
+
+    });
 });
