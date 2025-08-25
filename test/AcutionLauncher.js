@@ -37,7 +37,7 @@ describe("AuctionLauncher", function () {
         await zkRocket.waitForDeployment();
 
         const MockApp = await ethers.getContractFactory("MockApp");
-        mockApp = await MockApp.deploy();
+        mockApp = await MockApp.deploy(await zkBTC.getAddress(), await zkLIT.getAddress());
         await mockApp.waitForDeployment();
 
         const AuctionLauncher = await ethers.getContractFactory("AuctionLauncher");
