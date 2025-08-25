@@ -126,7 +126,7 @@ contract ZKRocket is AccessControl {
             // IVault(vaultAddress).claim(zkLIT, userAddress, _info.associatedAmount, withdraw); //TODO(L2Token amount)
         }
 
-        if (applications[protocolId] != address(0)) {
+        if (address(applications[protocolId]) != address(0)) {
             IApplication(applications[protocolId]). execute(vaultAddress, userAddress, withdraw, _info.associatedAmount, appData);
         }
     }

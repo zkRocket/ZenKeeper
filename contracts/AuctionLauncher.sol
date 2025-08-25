@@ -46,7 +46,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         require(_minPrice > 0, "Invalid minPrice");
         require(_feeRecipient != address(0), "Invalid feeRecipient address");
 
-        zkBTC = zkBTC;
+        zkBTC = _zkBTC;
         duration = _duration;
         minPrice = _minPrice;
         feeRecipient = _feeRecipient;
@@ -72,7 +72,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         require(success, "Transfer failed");
 
         zkRocket.registerApplication(_protocolAddress);
-        emit AuctionSuccess(uint256(round), _protocolAddress, msg.sender, _price, block.timestamp);
+        emit AuctionSuccess(uint256(round), address (_protocolAddress), msg.sender, _price, block.timestamp);
 
         // start next auction immediately
         round++;
@@ -87,7 +87,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
 
 
     function bidWithPermit(
-        address _protocolAddress,
+        IApplication _protocolAddress,
         uint256 _price,
         uint256 _deadline,
         uint8 _v,
