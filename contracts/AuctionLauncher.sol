@@ -9,10 +9,10 @@ import "./interfaces/IApplication.sol";
 
 
 contract AuctionLauncher is AccessControl, ReentrancyGuard {
-    IERC20 public immutable token;
+    IERC20 public immutable zkBTC;
     uint256 public duration;
     uint256 public minPrice;
-    address public developer;
+    address public feeRecipient;
     uint16 public round = 1;
 
     IRegisterApplication public zkRocket;
@@ -23,20 +23,11 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     uint256 public auctionStartPrice;
     uint256 public auctionStartTime;
 
-    struct BidRecord {
-        uint256 round;
-        address protocolAddress;
-        address buyer;
-        uint256 price;
-        uint256 time;
-    }
-    mapping (uint256 => BidRecord) public bidRecords;
-
     event AuctionStarted(uint256 indexed round, uint256 startPrice, uint256 startTime, uint256 duration);
     event AuctionSuccess(uint256 indexed round, address indexed protocolAddress, address indexed buyer,uint256 price, uint256 time);
     event MinPriceUpdated(uint256 oldMinPrice, uint256 newMinPrice);
     event DurationUpdated(uint256 oldDuration, uint256 newDuration);
-    event DeveloperUpdated(address oldDeveloper, address newDeveloper);
+    event FeeRecipientUpdated(address oldFeeRecipient, address newFeeRecipient);
 
     modifier auctionOngoing() {
         require(block.timestamp >= auctionStartTime, "Not started");
@@ -48,25 +39,23 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         _;
     }
 
-
-    constructor(address _token, uint256 _duration, uint256 _minPrice, address _developer, address _zkRocket) {
+    constructor(IERC20 _zkBTC, uint256 _duration, uint256 _minPrice, address _feeRecipient, IRegisterApplication _zkRocket) {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
 
-        require(_token != address(0), "Invalid token address");
         require(_duration > 0, "Invalid duration");
         require(_minPrice > 0, "Invalid minPrice");
-        require(_developer != address(0), "Invalid developer address");
-        require(_zkRocket != address(0), "Invalid zkRocket address");
-        token = IERC20(_token);
+        require(_feeRecipient != address(0), "Invalid feeRecipient address");
+
+        zkBTC = zkBTC;
         duration = _duration;
         minPrice = _minPrice;
-        developer = _developer;
-        zkRocket = IRegisterApplication(_zkRocket);
+        feeRecipient = _feeRecipient;
+        zkRocket = _zkRocket;
 
-        startAuction();
+        _startAuction();
     }
 
-    function startAuction( ) internal {
+    function _startAuction( ) internal {
         auctionStartPrice = minPrice;
         auctionMinPrice = minPrice;
         auctionDuration = duration;
@@ -75,25 +64,15 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
     }
 
     /// @notice 用户参与拍卖（先到先得）
-    function bid(address _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
+    function bid(IApplication _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
         uint256 expectedPrice = getCurrentPrice();
         require(_price >= expectedPrice, "pirce is lower than expected");
 
-        bool success = token.transferFrom(msg.sender, developer, _price);
+        bool success = zkBTC.transferFrom(msg.sender, feeRecipient, _price);
         require(success, "Transfer failed");
 
-        BidRecord memory _bid = BidRecord({
-            round: round,
-            protocolAddress: _protocolAddress,
-            buyer: msg.sender,
-            price: _price,
-            time: block.timestamp
-        });
-
-        bidRecords[round] = _bid;
         zkRocket.registerApplication(_protocolAddress);
         emit AuctionSuccess(uint256(round), _protocolAddress, msg.sender, _price, block.timestamp);
-
 
         // start next auction immediately
         round++;
@@ -106,7 +85,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         emit AuctionStarted(round, auctionStartPrice, auctionStartTime, auctionDuration);
     }
 
-    /// TODO， bidWithPermit
+
     function bidWithPermit(
         address _protocolAddress,
         uint256 _price,
@@ -115,7 +94,7 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         bytes32 _r,
         bytes32 _s
     ) external auctionOngoing nonReentrant {
-        IERC20Permit(address(token)).permit(
+        IERC20Permit(address(zkBTC)).permit(
             msg.sender,
             address(this),
             _price,
@@ -137,8 +116,6 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         uint256 discount = ((auctionStartPrice - auctionMinPrice) * elapsed) / auctionDuration;
         return auctionStartPrice - discount;
     }
-
-
     //modify duration, will be applied to next auction
     function modifyDuration(uint256 _duration) external onlyAdmin {
         require(_duration > 0, "Invalid duration");
@@ -154,10 +131,10 @@ contract AuctionLauncher is AccessControl, ReentrancyGuard {
         emit MinPriceUpdated(old, minPrice);
     }
 
-    function modifyDeveloper(address _developer) external onlyAdmin {
-        require(_developer != address(0), "Invalid developer address");
-        address old = developer;
-        developer = _developer;
-        emit DeveloperUpdated(old, developer);
+    function modifyFeeRecipient(address _feeRecipient) external onlyAdmin {
+        require(_feeRecipient != address(0), "Invalid developer address");
+        address old = feeRecipient;
+        feeRecipient = _feeRecipient;
+        emit FeeRecipientUpdated(old, feeRecipient);
     }
 }

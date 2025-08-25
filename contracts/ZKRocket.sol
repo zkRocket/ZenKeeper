@@ -1,17 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./interfaces/IZkBridge.sol";
+import "./interfaces/IZKBridge.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/IApplication.sol";
 import "hardhat/console.sol";
 
 contract ZKRocket is AccessControl {
-    address immutable public zkBTC;
+    IERC20 immutable public zkBTC;
+    IERC20 immutable public zkLIT;
     mapping(address => bool) public vaults;
     uint16 public nextProtocolId = 1;
-    mapping(uint16 => address) public applications;
+    mapping(uint16 => IApplication) public applications;
 
     /// @notice operator 角色标识
     bytes32 public constant AUCTION_LAUNCHER_ROLE = keccak256("AUCTION_LAUNCHER_ROLE");
@@ -27,6 +29,11 @@ contract ZKRocket is AccessControl {
         _;
     }
 
+    modifier onlyBridge() {
+        require(hasRole(BRIDGE_ROLE, msg.sender), "Caller is not bridge");
+        _;
+    }
+
     modifier onlyAuctionLauncher() {
         require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender), "Caller is not auction launcher");
         _;
@@ -37,14 +44,9 @@ contract ZKRocket is AccessControl {
         _;
     }
 
-    modifier onlyBridge() {
-        require(hasRole(BRIDGE_ROLE, msg.sender), "Caller is not bridge");
-        _;
-    }
-
-    constructor(address _zkBTC) {
-        require(_zkBTC.code.length > 0, "Invalid zkBTC contract");
+    constructor(IERC20 _zkBTC, IERC20 _zkLIT) {
         zkBTC = _zkBTC;
+        zkLIT = _zkLIT;
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -63,10 +65,9 @@ contract ZKRocket is AccessControl {
     }
 
     /// @notice auction launcher register application
-    function registerApplication(address _protocolAddress) external onlyAuctionLauncherOrAdmin {
-        require(_protocolAddress.code.length > 0, "Invalid application address");
+    function registerApplication(IApplication _protocolAddress) external onlyAuctionLauncherOrAdmin {
         applications[nextProtocolId] = _protocolAddress;
-        emit ApplicationRegistered(nextProtocolId, _protocolAddress);
+        emit ApplicationRegistered(nextProtocolId, address(_protocolAddress));
         nextProtocolId += 1;
      }
 
@@ -122,6 +123,7 @@ contract ZKRocket is AccessControl {
 
         if (vaults[vaultAddress]) {
             IVault(vaultAddress).claim(zkBTC, userAddress, _info.associatedAmount, withdraw);
+            // IVault(vaultAddress).claim(zkLIT, userAddress, _info.associatedAmount, withdraw); //TODO(L2Token amount)
         }
 
         if (applications[protocolId] != address(0)) {
