@@ -1,98 +1,104 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./interfaces/IApplication.sol";
+import "./interfaces/IZKRocket.sol";
 import "./interfaces/IVault.sol";
-import "./interfaces/IZkBridge.sol";
-import "./Auction.sol";
+import "./interfaces/IFeePool.sol";
+import "hardhat/console.sol";
 
-contract ZkRocket is Auction {
+
+contract ZKRocket is AccessControl {
+    IERC20Metadata immutable public zkBTC;
+    IERC20Metadata immutable public l2t;
+    uint256 public zkBTCDecimals;
+    uint256 public l2tDecimals;
+
+    IFeePool immutable public feePool;
     mapping(address => bool) public vaults;
     uint16 public nextProtocolId = 1;
     mapping(uint16 => IApplication) public applications;
+    uint256[2][8] public l2tMintTable;
 
+    /// @notice operator 角色标识
+    bytes32 public constant AUCTION_LAUNCHER_ROLE = keccak256("AUCTION_LAUNCHER_ROLE");
     bytes32 public constant BRIDGE_ROLE = keccak256("BRIDGE_ROLE");
 
     event VaultAdded(address indexed vault);
     event VaultRemoved(address indexed vault);
     event ApplicationRegistered(uint16 indexed protocolId, address indexed protoclAddress);
 
+    /// ---------- 修饰器 ----------
+    modifier onlyAdmin() {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not admin");
+        _;
+    }
+
     modifier onlyBridge() {
         require(hasRole(BRIDGE_ROLE, msg.sender), "Caller is not bridge");
         _;
     }
 
-    constructor(IERC20 _zkBTC, uint256 _duration, uint256 _minPrice, address _feeRecipient) Auction(_zkBTC, _duration, _minPrice, _feeRecipient) {
+    modifier onlyAuctionLauncher() {
+        require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender), "Caller is not auction launcher");
+        _;
+    }
+
+    modifier onlyAuctionLauncherOrAdmin() {
+        require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender)||hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not auction launcher or admin");
+        _;
+    }
+
+    constructor(IERC20Metadata _zkBTC, IERC20Metadata _l2t, IFeePool _feePool) {
+        zkBTC = _zkBTC;
+        l2t = _l2t;
+        feePool = _feePool;
+        zkBTCDecimals = zkBTC.decimals();
+        l2tDecimals = l2t.decimals();
+        uint256 decimalsDiff = l2tDecimals - zkBTCDecimals;
+
+        l2tMintTable[0] = [uint256(10254*10**zkBTCDecimals), 128*10**decimalsDiff];
+        l2tMintTable[1] = [uint256(164062*10**zkBTCDecimals), 64*10**decimalsDiff];
+        l2tMintTable[2] = [uint256(1312500*10**zkBTCDecimals), 32*10**decimalsDiff];
+        l2tMintTable[3] = [uint256(2625000*10**zkBTCDecimals), 16*10**decimalsDiff];
+        l2tMintTable[4] = [uint256(5250000*10**zkBTCDecimals), 8*10**decimalsDiff];
+        l2tMintTable[5] = [uint256(10500000*10**zkBTCDecimals), 4*10**decimalsDiff];
+        l2tMintTable[6] = [uint256(21000000*10**zkBTCDecimals), 2*10**decimalsDiff];
+        l2tMintTable[7] = [uint256(42000000*10**zkBTCDecimals), 1*10**decimalsDiff]; //<=
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
-
-    /// @notice 用户参与拍卖（先到先得）
-    function bid(IApplication _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
-        uint256 expectedPrice = getCurrentPrice();
-        require(_price >= expectedPrice, "price is lower than expected");
-
-        bool success = zkBTC.transferFrom(msg.sender, feeRecipient, _price);
-        require(success, "Transfer failed");
-
-        _registerApplication(_protocolAddress);
-        emit AuctionSuccess(uint256(round), address(_protocolAddress), msg.sender, _price, block.timestamp);
-
-        // start next auction immediately
-        round++;
-
-        // auctionStartPrice = max(newMinPrice, price *2)
-        auctionStartPrice = _price * 2 >= minPrice ? _price * 2 : minPrice;
-        auctionMinPrice = minPrice;
-        auctionDuration = duration;
-        auctionStartTime = block.timestamp;
-        emit AuctionStarted(round, auctionStartPrice, auctionStartTime, auctionDuration);
+    /// @notice 添加新的 vault（仅限 admin）
+    function addVault(address _vault) external onlyAdmin {
+        require(_vault.code.length > 0, "Invalid vault address");
+        vaults[_vault] = true;
+        emit VaultAdded(_vault);
     }
 
-    /// TODO， bidWithPermit
-    function bidWithPermit(
-        IApplication _protocolAddress,
-        uint256 _price,
-        uint256 _deadline,
-        uint8 _v,
-        bytes32 _r,
-        bytes32 _s
-    ) external auctionOngoing nonReentrant {
-        IERC20Permit(address(zkBTC)).permit(
-            msg.sender,
-            address(this),
-            _price,
-            _deadline,
-            _v, _r, _s
-        );
-
-        bid(_protocolAddress, _price);
+    /// @notice 移除 vault（仅限 admin）
+    function removeVault(address _vault) external onlyAdmin {
+        require(vaults[_vault], "Vault not found");
+        delete vaults[_vault];
+        emit VaultRemoved(_vault);
     }
-
 
     /// @notice auction launcher register application
-    function registerApplication(IApplication _protocolAddress) public onlyAdmin {
-        _registerApplication(_protocolAddress);
-    }
-
-    function _registerApplication(IApplication _protocolAddress) internal {
+    function registerApplication(IApplication _protocolAddress) external onlyAuctionLauncherOrAdmin {
         applications[nextProtocolId] = _protocolAddress;
         emit ApplicationRegistered(nextProtocolId, address(_protocolAddress));
         nextProtocolId += 1;
-    }
+     }
 
     /// @notice  only zkBridge
-    /*           | <--------------------------------at least 46 bytes ----------------------------------->|
-    fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId  userOption userAddress  appData
-    length(bytes):    1        1       0/1/2/4        20            1           2          1          20
+    /*           | <--------------------------------at least 45 bytes ------------------------->|
+    fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId   userAddress  appData
+    length(bytes):    1        1       0/1/2/4        20            1           2         20
     */
 
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
-        if (_info.data.length < 46){
+        if (_info.data.length < 45){
             return;
         }
 
@@ -100,9 +106,10 @@ contract ZkRocket is Auction {
         uint256 vaultAddressOffset = 0;
 
         {
+            //data[0]=OP_RETURN,
             uint256 l;
             uint8 opcode = uint8(data[1]);
-            if (0x2c <= opcode && opcode <= 0x4B) { //44 ~75
+            if (0x2B <= opcode && opcode <= 0x4B) { //43 ~75
                 l = opcode;
                 vaultAddressOffset = 2;
             } else if (opcode == 0x4c) {
@@ -126,36 +133,23 @@ contract ZkRocket is Auction {
 
         assembly {
             vaultAddress := shr(96, mload(add(add(data, 0x20), vaultAddressOffset)))
-            userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 24))))
-        }
+            userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 23))))
+           }
 
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
-        bool withdraw = (uint8(data[vaultAddressOffset + 23]) & 0x01) != 0;
-
-        bytes memory appData = sliceFrom(data, vaultAddressOffset+44);
 
         if (vaults[vaultAddress]) {
-            IVault(vaultAddress).claim(userAddress, _info.associatedAmount, withdraw);
+            IVault(vaultAddress).credit(userAddress, _info.associatedAmount);
+
+            if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
+                uint256 litAmount = calculateL2TAmount(_info.associatedAmount);
+                IVault(vaultAddress).settle(address(applications[protocolId]), litAmount);
+            }
         }
 
         if (address(applications[protocolId]) != address(0)) {
-            IApplication(applications[protocolId]).execute(vaultAddress, userAddress, withdraw, _info.associatedAmount, appData);
+            IApplication(applications[protocolId]).execute(vaultAddress, userAddress, _info.associatedAmount, _info);
         }
-    }
-
-    /// @notice 添加新的 vault（仅限 admin)
-    function addVault(IVault _vault) external onlyAdmin {
-        address vaultAddr = address(_vault);
-        vaults[vaultAddr] = true;
-        emit VaultAdded(vaultAddr);
-    }
-
-    /// @notice 移除 vault（仅限 admin）.
-    function removeVault(IVault _vault) external onlyAdmin {
-        address vaultAddr = address(_vault);
-        require(vaults[vaultAddr], "Vault not found");
-        delete vaults[vaultAddr];
-        emit VaultRemoved(vaultAddr);
     }
 
     function sliceFrom(bytes memory data, uint256 offset) public pure returns (bytes memory result) {
@@ -173,4 +167,22 @@ contract ZkRocket is Auction {
             }
         }
     }
+
+    function calculateL2TAmount(uint256 _zkBTCAmount) public view returns (uint256) {
+        uint256 totalBridgeAmount = feePool.totalBridgeAmount();
+
+        uint256 multiplier = 0;
+        for (uint i = 0; i < l2tMintTable.length; i++) {
+            if (totalBridgeAmount < l2tMintTable[i][0]) {
+                multiplier = l2tMintTable[i][1];
+                break;
+            }
+        }
+        if (multiplier == 0) {
+            return 0;
+        }else {
+            return _zkBTCAmount * multiplier;
+        }
+    }
+
 }

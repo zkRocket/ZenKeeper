@@ -1,13 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../interfaces/IApplication.sol";
+import {MockVault} from "./MockVault.sol";
 
-contract MockApp is IApplication {
-    constructor(){}
+contract MockApp is IApplication,MockVault {
+    constructor(IERC20 _zkBTC, IERC20 _l2t) MockVault(_zkBTC, _l2t) {}
 
-    event Execute(address indexed _vault, address indexed _user, bool _withdraw, uint256 _amount, bytes _data);
+    event Execute(address indexed _vault, address indexed _user, uint256 _amount);
 
-    function execute(address _vault, address _user, bool _withdraw, uint256 _amount, bytes calldata _data) external {
-        emit Execute(_vault, _user, _withdraw, _amount, _data);
+    function execute(address _vault, address _user, uint256 _amount, ProvenData calldata _data) external {
+        emit Execute(_vault, _user, _amount);
     }
 }

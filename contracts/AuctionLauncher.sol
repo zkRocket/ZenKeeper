@@ -1,20 +1,21 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.0;
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IApplication.sol";
-import {IVault} from "./interfaces/IVault.sol";
-import "./interfaces/IZkBridge.sol";
 
-contract Auction is AccessControl, ReentrancyGuard {
+
+contract AuctionLauncher is AccessControl, ReentrancyGuard {
     IERC20 public immutable zkBTC;
     uint256 public duration;
     uint256 public minPrice;
     address public feeRecipient;
     uint16 public round = 1;
+
+    IRegisterApplication public zkRocket;
 
     //variables for each auction
     uint256 public auctionDuration;
@@ -38,25 +39,72 @@ contract Auction is AccessControl, ReentrancyGuard {
         _;
     }
 
-    constructor(IERC20 _zkBTC, uint256 _duration, uint256 _minPrice, address _feeRecipient) {
+    constructor(IERC20 _zkBTC, uint256 _duration, uint256 _minPrice, address _feeRecipient, IRegisterApplication _zkRocket) {
+        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+
         require(_duration > 0, "Invalid duration");
         require(_minPrice > 0, "Invalid minPrice");
-        require(_feeRecipient != address(0), "Invalid developer address");
+        require(_feeRecipient != address(0), "Invalid feeRecipient address");
+
         zkBTC = _zkBTC;
         duration = _duration;
         minPrice = _minPrice;
         feeRecipient = _feeRecipient;
+        zkRocket = _zkRocket;
 
-        startAuction();
+        _startAuction();
     }
 
-    function startAuction( ) internal {
+    function _startAuction( ) internal {
         auctionStartPrice = minPrice;
         auctionMinPrice = minPrice;
         auctionDuration = duration;
         auctionStartTime = block.timestamp;
         emit AuctionStarted(round, auctionStartPrice, auctionStartTime, duration);
     }
+
+    /// @notice 用户参与拍卖（先到先得）
+    function bid(IApplication _protocolAddress, uint256 _price) public auctionOngoing nonReentrant  {
+        uint256 expectedPrice = getCurrentPrice();
+        require(_price >= expectedPrice, "pirce is lower than expected");
+
+        bool success = zkBTC.transferFrom(msg.sender, feeRecipient, _price);
+        require(success, "Transfer failed");
+
+        zkRocket.registerApplication(_protocolAddress);
+        emit AuctionSuccess(uint256(round), address (_protocolAddress), msg.sender, _price, block.timestamp);
+
+        // start next auction immediately
+        round++;
+
+        // auctionStartPrice = max(newMinPrice, price *2)
+        auctionStartPrice = _price * 2 >= minPrice ? _price * 2 : minPrice;
+        auctionMinPrice = minPrice;
+        auctionDuration = duration;
+        auctionStartTime = block.timestamp;
+        emit AuctionStarted(round, auctionStartPrice, auctionStartTime, auctionDuration);
+    }
+
+
+    function bidWithPermit(
+        IApplication _protocolAddress,
+        uint256 _price,
+        uint256 _deadline,
+        uint8 _v,
+        bytes32 _r,
+        bytes32 _s
+    ) external auctionOngoing nonReentrant {
+        IERC20Permit(address(zkBTC)).permit(
+            msg.sender,
+            address(this),
+            _price,
+            _deadline,
+            _v, _r, _s
+        );
+
+        bid(_protocolAddress, _price);
+    }
+
 
     /// @notice 实时计算当前价格（线性下降）
     function getCurrentPrice() public view returns (uint256) {
@@ -68,8 +116,6 @@ contract Auction is AccessControl, ReentrancyGuard {
         uint256 discount = ((auctionStartPrice - auctionMinPrice) * elapsed) / auctionDuration;
         return auctionStartPrice - discount;
     }
-
-
     //modify duration, will be applied to next auction
     function modifyDuration(uint256 _duration) external onlyAdmin {
         require(_duration > 0, "Invalid duration");
@@ -91,5 +137,4 @@ contract Auction is AccessControl, ReentrancyGuard {
         feeRecipient = _feeRecipient;
         emit FeeRecipientUpdated(old, feeRecipient);
     }
-
 }

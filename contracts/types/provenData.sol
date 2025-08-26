@@ -7,7 +7,3 @@ pragma solidity ^0.8.20;
         bytes data;
         bool retrieved;
     }
-
-interface ReserveInterface {
-    function retrieve(ProvenData calldata _info, bytes32 _txid) external;
-}
