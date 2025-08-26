@@ -118,9 +118,10 @@ end
 ## 测试准备
 - deploy zkBTC
 - deploy zkRocket
-- deploy mokcApp
+- deploy mokcApp: 0xEa863A1f265a2D87E4F4B70A4cA8C095ad6AC18b
 - deploy auction
-- deploy vault
+- deploy vault:
+- deploy feepool: mockFeePool: 0x09feeCff308d1f2fDAD8350257B9eDE28AC7d867
 - 将vault 增加到zkRocket中
 - 将zkRocket 设置为vault 的OPERATOR_ROLE
 - 将Auction 设置为zkRocket的AUCTION_ROLE
