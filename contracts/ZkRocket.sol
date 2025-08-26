@@ -55,10 +55,11 @@ contract ZKRocket is AccessControl {
         zkBTC = _zkBTC;
         l2t = _l2t;
         feePool = _feePool;
+
         zkBTCDecimals = zkBTC.decimals();
         l2tDecimals = l2t.decimals();
+        require(l2tDecimals >= zkBTCDecimals, "Decimals mismatch");
         uint256 decimalsDiff = l2tDecimals - zkBTCDecimals;
-
         l2tMintTable[0] = [uint256(10254*10**zkBTCDecimals), 128*10**decimalsDiff];
         l2tMintTable[1] = [uint256(164062*10**zkBTCDecimals), 64*10**decimalsDiff];
         l2tMintTable[2] = [uint256(1312500*10**zkBTCDecimals), 32*10**decimalsDiff];
