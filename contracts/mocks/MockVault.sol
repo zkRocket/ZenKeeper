@@ -7,7 +7,7 @@ import {IVault} from "../interfaces/IVault.sol";
 
 contract MockVault is IVault, AccessControl {
     IERC20 public immutable zkBTC;
-    IERC20 public immutable zkLIT;
+    IERC20 public immutable l2t;
     /// @notice 记录用户zkBTC 余额：user => amount
     mapping(address => uint256) public balances;
 
@@ -15,7 +15,7 @@ contract MockVault is IVault, AccessControl {
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     event ClaimZKBTC(address indexed user, uint256 amount);
-    event ClaimZKLIT(address indexed user, uint256 amount);
+    event ClaimL2T(address indexed user, uint256 amount);
 
     /// ---------- 修饰器 ----------
     modifier onlyAdmin() {
@@ -29,9 +29,9 @@ contract MockVault is IVault, AccessControl {
     }
 
     /// @notice 构造函数：设置 admin 为部署者，初始化支持的 token
-    constructor(IERC20 _zkBTC, IERC20 _zkLIT) {
+    constructor(IERC20 _zkBTC, IERC20 _l2t) {
         zkBTC = _zkBTC;
-        zkLIT = _zkLIT;
+        l2t = _l2t;
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
       }
@@ -45,12 +45,12 @@ contract MockVault is IVault, AccessControl {
         emit ClaimZKBTC(_to, _amount);
     }
 
-    function claimZKLIT(address _to, uint256 _amount) onlyOperator external {
+    function claimL2T(address _to, uint256 _amount) onlyOperator external {
         require(_to != address(0), "Invalid recipient");
         require(_amount > 0, "Amount must be > 0");
-        require (zkLIT.balanceOf(address(this)) >= _amount, "Vault balance too low");
-        bool success = zkLIT.transfer(_to, _amount);
-        emit ClaimZKLIT(_to, _amount);
+        require (l2t.balanceOf(address(this)) >= _amount, "Vault balance too low");
+        bool success = l2t.transfer(_to, _amount);
+        emit ClaimL2T(_to, _amount);
     }
 
     function investZKBTCTo(address _to, uint256 _amount) external onlyAdmin {
@@ -64,13 +64,13 @@ contract MockVault is IVault, AccessControl {
         require(success, "Transfer failed");
     }
 
-    function investZKLITTo(address _to, uint256 _amount) external onlyAdmin {
+    function investL2TTo(address _to, uint256 _amount) external onlyAdmin {
         require(_to != address(0), "Invalid recipient");
         require(_amount > 0, "Amount must be > 0");
 
-        uint256 amount = zkLIT.balanceOf(address(this));
+        uint256 amount = l2t.balanceOf(address(this));
         require(amount >= _amount, "Insufficient funds");
-        bool success = zkLIT.transfer(_to, _amount);
+        bool success = l2t.transfer(_to, _amount);
         require(success, "Transfer failed");
     }
 

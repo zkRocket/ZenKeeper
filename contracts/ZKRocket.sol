@@ -12,15 +12,15 @@ import "hardhat/console.sol";
 
 contract ZKRocket is AccessControl {
     IERC20Metadata immutable public zkBTC;
-    IERC20Metadata immutable public zkLIT;
+    IERC20Metadata immutable public l2t;
     uint256 public zkBTCDecimals;
-    uint256 public zkLITDecimals;
+    uint256 public l2tDecimals;
 
     IFeePool immutable public feePool;
     mapping(address => bool) public vaults;
     uint16 public nextProtocolId = 1;
     mapping(uint16 => IApplication) public applications;
-    uint256[2][8] public litMintTable;
+    uint256[2][8] public l2tMintTable;
 
     /// @notice operator 角色标识
     bytes32 public constant AUCTION_LAUNCHER_ROLE = keccak256("AUCTION_LAUNCHER_ROLE");
@@ -51,22 +51,22 @@ contract ZKRocket is AccessControl {
         _;
     }
 
-    constructor(IERC20Metadata _zkBTC, IERC20Metadata _zkLIT, IFeePool _feePool) {
+    constructor(IERC20Metadata _zkBTC, IERC20Metadata _l2t, IFeePool _feePool) {
         zkBTC = _zkBTC;
-        zkLIT = _zkLIT;
+        l2t = _l2t;
         feePool = _feePool;
         zkBTCDecimals = zkBTC.decimals();
-        zkLITDecimals = zkLIT.decimals();
-        uint256 decimalsDiff = zkLITDecimals - zkBTCDecimals;
+        l2tDecimals = l2t.decimals();
+        uint256 decimalsDiff = l2tDecimals - zkBTCDecimals;
 
-        litMintTable[0] = [uint256(10254*10**zkBTCDecimals), 128*10**decimalsDiff];
-        litMintTable[1] = [uint256(164062*10**zkBTCDecimals), 64*10**decimalsDiff];
-        litMintTable[2] = [uint256(1312500*10**zkBTCDecimals), 32*10**decimalsDiff];
-        litMintTable[3] = [uint256(2625000*10**zkBTCDecimals), 16*10**decimalsDiff];
-        litMintTable[4] = [uint256(5250000*10**zkBTCDecimals), 8*10**decimalsDiff];
-        litMintTable[5] = [uint256(10500000*10**zkBTCDecimals), 4*10**decimalsDiff];
-        litMintTable[6] = [uint256(21000000*10**zkBTCDecimals), 2*10**decimalsDiff];
-        litMintTable[7] = [uint256(42000000*10**zkBTCDecimals), 1*10**decimalsDiff]; //<=
+        l2tMintTable[0] = [uint256(10254*10**zkBTCDecimals), 128*10**decimalsDiff];
+        l2tMintTable[1] = [uint256(164062*10**zkBTCDecimals), 64*10**decimalsDiff];
+        l2tMintTable[2] = [uint256(1312500*10**zkBTCDecimals), 32*10**decimalsDiff];
+        l2tMintTable[3] = [uint256(2625000*10**zkBTCDecimals), 16*10**decimalsDiff];
+        l2tMintTable[4] = [uint256(5250000*10**zkBTCDecimals), 8*10**decimalsDiff];
+        l2tMintTable[5] = [uint256(10500000*10**zkBTCDecimals), 4*10**decimalsDiff];
+        l2tMintTable[6] = [uint256(21000000*10**zkBTCDecimals), 2*10**decimalsDiff];
+        l2tMintTable[7] = [uint256(42000000*10**zkBTCDecimals), 1*10**decimalsDiff]; //<=
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -143,7 +143,7 @@ contract ZKRocket is AccessControl {
 
             if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
                 uint256 litAmount = calculateLITAmount(_info.associatedAmount);
-                IVault(vaultAddress).claimZKLIT(address(applications[protocolId]), litAmount);
+                IVault(vaultAddress).claimL2T(address(applications[protocolId]), litAmount);
             }
         }
 
@@ -172,9 +172,9 @@ contract ZKRocket is AccessControl {
         uint256 totalBridgeAmount = feePool.totalBridgeAmount();
 
         uint256 multiplier = 0;
-        for (uint i = 0; i < litMintTable.length; i++) {
-            if (totalBridgeAmount < litMintTable[i][0]) {
-                multiplier = litMintTable[i][1];
+        for (uint i = 0; i < l2tMintTable.length; i++) {
+            if (totalBridgeAmount < l2tMintTable[i][0]) {
+                multiplier = l2tMintTable[i][1];
                 break;
             }
         }

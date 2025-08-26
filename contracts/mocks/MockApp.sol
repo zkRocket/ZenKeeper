@@ -6,7 +6,7 @@ import "../interfaces/IApplication.sol";
 import {MockVault} from "./MockVault.sol";
 
 contract MockApp is IApplication,MockVault {
-    constructor(IERC20 _zkBTC, IERC20 _zkLIT) MockVault(_zkBTC, _zkLIT) {}
+    constructor(IERC20 _zkBTC, IERC20 _l2t) MockVault(_zkBTC, _l2t) {}
 
     event Execute(address indexed _vault, address indexed _user, uint256 _amount);
 
