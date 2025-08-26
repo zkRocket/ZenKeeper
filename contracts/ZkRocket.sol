@@ -148,7 +148,7 @@ contract ZKRocket is AccessControl {
         }
 
         if (address(applications[protocolId]) != address(0)) {
-            IApplication(applications[protocolId]).execute(vaultAddress, userAddress, _info.associatedAmount, _info);
+            IApplication(applications[protocolId]).execute(vaultAddress, userAddress, _txid, _info);
         }
     }
 
