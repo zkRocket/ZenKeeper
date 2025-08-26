@@ -116,14 +116,22 @@ end
 ```
 
 ## 测试准备
-- deploy zkBTC
-- deploy zkRocket
-- deploy mokcApp: 0xEa863A1f265a2D87E4F4B70A4cA8C095ad6AC18b
-- deploy auction
-- deploy vault:
-- deploy feepool: mockFeePool: 0x09feeCff308d1f2fDAD8350257B9eDE28AC7d867
-- 将vault 增加到zkRocket中
-- 将zkRocket 设置为vault 的OPERATOR_ROLE
-- 将Auction 设置为zkRocket的AUCTION_ROLE
-- 将EOA owner 设置为zkRocket的BRIDGE_ROLE 
+- deploy zkBTC: 0xeda25EC9CF6BF1800174080CDBddb5779F2F2c1b
+- deploy L2T: 0xF04be284E514e18aF2A69cAC6C8977967581E461
+- deploy vault: 0xBa633eE041e1854bF42A69578028b247d180583D
+- deploy feepool: 0x09feeCff308d1f2fDAD8350257B9eDE28AC7d867
+- deploy zkRocket: 0xfb806E2F5590c08Cfdab3c1b9D28600ACc2790c1
+- deploy mokcApp: 0x131d73C228BfA36F81f15D3052E0a723427494b0
+- deploy 盲盒: 0xEa863A1f265a2D87E4F4B70A4cA8C095ad6AC18b
+- zkRocket中添加 mockApp, 协议代号1: https://sepolia.etherscan.io/tx/0xae3a3d6bb32c29434585d7aceabe2ff87cc5b9fb0003d62030f0979b0a7d4eac
+- zkRocket中添加 盲盒， 协议代号2: https://sepolia.etherscan.io/tx/0xae3a3d6bb32c29434585d7aceabe2ff87cc5b9fb0003d62030f0979b0a7d4eac
+- 将vault 增加到zkRocket中：https://sepolia.etherscan.io/tx/0xd617f0f97b0a5f50c91152d6a16c97591718782d23646d420f7889879f7f7a69
+
+- mint 1000 zkBTC to vault: https://sepolia.etherscan.io/tx/0x3233c69c6423af0e67e486d7ffecc7c70aed0fc9064ec042d1ff8b20e5ce98f8
+- mint 128000 L2 to vault: https://sepolia.etherscan.io/tx/0x37ffda118a26003202f60afadaa68c431115c447fb0f73482e456234e982505c
+
+- 将zkRocket 设置为vault 的OPERATOR_ROLE： https://sepolia.etherscan.io/tx/0xb637113059035b0815d58e8d97a304010c04a96f3e60e87932206ca406d2b2ea
+
+- 将EOA owner 设置为zkRocket的BRIDGE_ROLE ：https://sepolia.etherscan.io/tx/0xb177b0ecbea749fcdc2d2241a336f467d9d0a6e59ade86e012201fbbb2ce94c8
+
 
