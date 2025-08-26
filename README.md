@@ -92,11 +92,11 @@ zkBridge ->> zkBridge: if retrieved == true, revert
 zkBridge ->> zkRocket: retrieve(index, blockHash, amount, data)
 zkRocket ->> zkRocket: decode data 得到 vaultAddress, userAddress, protocolId
 Note over zkRocket, vault: zkRocket's vault 
-alt vault[vaultAddress] == true 
+alt vault[vaultAddress] == true  //vault是zkRocket的金库
     zkRocket ->> vault: credit(userAddress, amount) //为用户的zkBTC 记账
     
     alt applications[protolId] != vaultAddress && applications[protolId] != address(0) //用户参与其他的应用
-        litAmount = calculateL2TAmount(_info.associatedAmount); //计算出用户应得到L2T
+        zkRocket->>zkRocket: litAmount = calculateL2TAmount(_info.associatedAmount)    // 计算L2T 数量
         vault->>vault:  IVault(vaultAddress).settle(address(applications[protocolId]), litAmount) //将zkBTC转给用户
     end
 end 
@@ -107,13 +107,12 @@ alt applications[protocolId] != address(0)
 else applications[protocolId] == address(0)
   Note over zkRocket, zkApp: do nothing 
 end
-zkRocket->>zkBridge:
-zkBridge->>zkBridge: retrieved =true
+
 ```
 ## zkRockets 的应用合约
 应用合约要实现如下execute 接口：
 ```solidity 
- function execute(address vaultAddress, addres userAddress, bool userOption, uint256 amount, bytes calldata data) external;
+ function execute(address vaultAddress, addres userAddress, uint256 amount, Provendata data) external;
 ```
 
 ## 测试准备
