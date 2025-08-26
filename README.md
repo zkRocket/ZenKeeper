@@ -2,29 +2,41 @@
 The ZenKeeper Protocol, a protocol for Bitcoin-based assets, based on the zkBTC cross-chain capabilities.
 
 ## Vault 合约
-Vault 是一个可托管zkBTC资产的金库合约，在deposit时，用于接收过桥的zkBTC 以及奖励的的LIT Token. 该合约提供一个claim接口，允许有特定权限的人(例如zkBridge)将资产从vault 转移到用户，或者在vault中为用户记账。这个claim 应该只被有特定权限的合约访问，例如zkRocket 或者zkApp
+Vault 是一个可托管zkBTC资产的金库合约，在deposit时，用于接收过桥的zkBTC 以及奖励的的L2T Token. 该合约提供一个credit和settle接口，
+- credit：用于在vault合约中给用户zkBTC记账。
+- settle：将vault合约中的L2T转移到别的地址
+这两个接口应该只被有特定权限的合约访问，例如zkRocket 或者zkApp
 ```solidity
-function claim(address token, address to, uint256 amount, bool withdrawal){
-   if(withdrawal) {
-      bool success = IERC20(token).transfer(to, amount);
-    }else{
-      balances[token][to] += amount;
-   }
-}
+    function credit(address _to, uint256 _amount) onlyOperator external {
+        require(_to != address(0), "Invalid recipient");
+        require(_amount > 0, "Amount must be > 0");
+        require (zkBTC.balanceOf(address(this)) >= _amount, "Vault balance too low");
+        balances[_to] += _amount;
+        emit Credit(_to, _amount);
+    }
+
+    function settle(address _to, uint256 _amount) onlyOperator external {
+        require(_to != address(0), "Invalid recipient");
+        require(_amount > 0, "Amount must be > 0");
+        require (l2t.balanceOf(address(this)) >= _amount, "Vault balance too low");
+        bool success = l2t.transfer(_to, _amount);
+        require(success, "Transfer failed");
+        emit Settle(_to, _amount);
+    }
+
 ```
 ## zkRockets 合约
 zkRocket 处理deposit 交易中OP_RETURN 后的数据
 ```
-                             |<-------------------------------zkRockets--------------------------------------->|----appData------->
-    fields:       OP_REURN     opcode     length      addressA    chainId    protocolId   userOption addressB     appData
-    length(bytes):    1           1       0/1/2/4        20            1           2          1          20         xxx 
+                   ｜<----------------------------------zkRockets--------------------------------->|----appData------->
+    fields:       OP_REURN     opcode     length      addressA    chainId    protocolId    addressB     appData
+    length(bytes):    1           1       0/1/2/4        20            1           2          20         xxx 
 ```
-- addressA: zkBridge 处理deposit时，将过桥的zkBTC 以及奖励的的LIT Token 直接转账到该地址.addressA 3种可能:
+- addressA: zkBridge 处理deposit时，将过桥的zkBTC 以及奖励的的L2T Token 直接转账到该地址.addressA 3种可能:
    - 用户地址. 此时用户不参与zkRockets 协议。
    - zkRocket 控制的vault 地址。
    - zkRocket 上的应用(例如zkRunes)控制的vault 地址。 
 - chainId: 因为支持从BTC 跨链到多条EVM链，用chainId跨链的目标链，0-eth 
-- userOption: true:需要将用户的zkBTC 转移到指定的addressB上，false:，在vault中为用户记账; 
 - addressB: 用户指定的地址
 - appData: zkRocket上的应用协议数据。
 
@@ -51,7 +63,16 @@ sequenceDiagram
     participant aution
     participant zkRocket
 
-    aution ->> zkRocket: addApplication(protocolId, appAddress)
+    aution ->> zkRocket: registerApplication(protocolId, appAddress)
+    zkRocket ->> zkRocket: appliations[protocolId] = appAddress
+```
+zkRocket也可以直接注册appliction
+```mermaid
+sequenceDiagram
+    participant adminstrator
+    participant zkRocket
+
+    adminstrator ->> zkRocket: registerApplication(protocolId, appAddress)
     zkRocket ->> zkRocket: appliations[protocolId] = appAddress
 ```
 
@@ -68,7 +89,7 @@ sequenceDiagram
 user ->> zkBridge: retrieve(txid)
 zkBridge ->> zkBridge: if retrieved == true, revert 
 zkBridge ->> zkRocket: retrieve(index, blockHash, amount, data)
-zkRocket ->> zkRocket: decode data 得到 vaultAddress, userAddress, userOption, protocolId
+zkRocket ->> zkRocket: decode data 得到 vaultAddress, userAddress, protocolId
 Note over zkRocket, vault: zkRocket's vault 
 alt vault[vaultAddress] == true 
     zkRocket ->> vault: claim(userAddress, amount, userOption)
@@ -107,3 +128,4 @@ zkBridge->>zkBridge: retrieved =true
 - 将zkRocket 设置为vault 的OPERATOR_ROLE
 - 将Auction 设置为zkRocket的AUCTION_ROLE
 - 将EOA owner 设置为zkRocket的BRIDGE_ROLE 
+
