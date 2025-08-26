@@ -58,6 +58,7 @@ sequenceDiagram
 ```
 
 #### 在zkRockets上注册应用协议
+- aution 在拍卖成功后可以在zkRocket上注册应用。
 ```mermaid
 sequenceDiagram
     participant aution
@@ -66,7 +67,7 @@ sequenceDiagram
     aution ->> zkRocket: registerApplication(protocolId, appAddress)
     zkRocket ->> zkRocket: appliations[protocolId] = appAddress
 ```
-zkRocket也可以直接注册appliction
+- zkRocket的adminstrator 也可以直接注册appliction
 ```mermaid
 sequenceDiagram
     participant adminstrator
