@@ -97,9 +97,9 @@ describe("ZkRocket", function () {
 
         let vaultZKBTCBalanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
         expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
-        let vaultZKLITBalanceBefore = await l2t.balanceOf(await mockVault.getAddress());
-        let appZKLITBalanceBefore = await l2t.balanceOf(await mockApp.getAddress());
-        expect(appZKLITBalanceBefore).to.equal(0n);
+        let vaultL2TBalanceBefore = await l2t.balanceOf(await mockVault.getAddress());
+        let appL2TBalanceBefore = await l2t.balanceOf(await mockApp.getAddress());
+        expect(appL2TBalanceBefore).to.equal(0n);
 
         await expect(
             zkRocket.retrieve(provenData, txid)
@@ -109,13 +109,13 @@ describe("ZkRocket", function () {
         expect(vaultZKBTCBalanceBefore - vaultZKBTCBalanceAfter).to.equal(0n);
         expect(await mockVault.balances(await owner.address)).to.equal(amount);
 
-        let vaultZKLITBalanceAfter = await l2t.balanceOf(await mockVault.getAddress());
-        let appZKLITBalanceAfter = await l2t.balanceOf(await mockApp.getAddress());
-        expect(vaultZKLITBalanceBefore - vaultZKLITBalanceAfter)
-            .to.equal(appZKLITBalanceAfter - appZKLITBalanceBefore);
+        let vaultL2TBalanceAfter = await l2t.balanceOf(await mockVault.getAddress());
+        let appL2TBalanceAfter = await l2t.balanceOf(await mockApp.getAddress());
+        expect(vaultL2TBalanceBefore - vaultL2TBalanceAfter)
+            .to.equal(appL2TBalanceAfter - appL2TBalanceBefore);
 
-        let litAmount = await zkRocket.calculateLITAmount(amount);
-        expect(appZKLITBalanceAfter).to.equal(litAmount);
+        let litAmount = await zkRocket.calculateL2TAmount(amount);
+        expect(appL2TBalanceAfter).to.equal(litAmount);
     }
 
     beforeEach(async function (){
@@ -288,8 +288,8 @@ describe("ZkRocket", function () {
             let vaultZKBTCBalanceBefore = await zkBTC.balanceOf(await mockApp.getAddress());
             expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
             expect(await mockApp.balances(await owner.address)).to.equal(0);
-            let vaultZKLITBalanceBefore = await l2t.balanceOf(await mockApp.getAddress());
-            expect(vaultZKLITBalanceBefore).to.equal(100000n *big18);
+            let vaultL2TBalanceBefore = await l2t.balanceOf(await mockApp.getAddress());
+            expect(vaultL2TBalanceBefore).to.equal(100000n *big18);
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
@@ -299,8 +299,8 @@ describe("ZkRocket", function () {
             expect(vaultZKBTCBalanceBefore - vaultZKBTCBalanceAfter).to.equal(0n);
             expect(await mockApp.balances(await owner.address)).to.equal(amount);
 
-            let vaultZKLITBalanceAfter = await l2t.balanceOf(await mockApp.getAddress());
-            expect(vaultZKLITBalanceBefore).to.equal(vaultZKLITBalanceAfter);
+            let vaultL2TBalanceAfter = await l2t.balanceOf(await mockApp.getAddress());
+            expect(vaultL2TBalanceBefore).to.equal(vaultL2TBalanceAfter);
         });
 
         it("to mockVault address， no protocol,  appdata length= 132001", async function () {
@@ -319,9 +319,9 @@ describe("ZkRocket", function () {
 
             let vaultZKBTCBalanceBefore = await zkBTC.balanceOf(await mockVault.getAddress());
             expect(await zkBTC.balanceOf(await owner.address)).to.equal(0n);
-            let vaultZKLITBalanceBefore = await l2t.balanceOf(await mockVault.getAddress());
-            let appZKLITBalanceBefore = await l2t.balanceOf(await mockApp.getAddress());
-            expect(appZKLITBalanceBefore).to.equal(0n);
+            let vaultL2TBalanceBefore = await l2t.balanceOf(await mockVault.getAddress());
+            let appL2TBalanceBefore = await l2t.balanceOf(await mockApp.getAddress());
+            expect(appL2TBalanceBefore).to.equal(0n);
 
             await zkRocket.retrieve(provenData, txid);
 
@@ -330,10 +330,10 @@ describe("ZkRocket", function () {
             expect(vaultZKBTCBalanceBefore - vaultZKBTCBalanceAfter).to.equal(0n);
             expect(await mockVault.balances(await owner.address)).to.equal(amount);
 
-            let vaultZKLITBalanceAfter = await l2t.balanceOf(await mockVault.getAddress());
-            let appZKLITBalanceAfter = await l2t.balanceOf(await mockApp.getAddress());
-            expect(vaultZKLITBalanceBefore - vaultZKLITBalanceAfter).to.equal(0n);
-            expect(appZKLITBalanceAfter - appZKLITBalanceBefore).to.equal(0n);
+            let vaultL2TBalanceAfter = await l2t.balanceOf(await mockVault.getAddress());
+            let appL2TBalanceAfter = await l2t.balanceOf(await mockApp.getAddress());
+            expect(vaultL2TBalanceBefore - vaultL2TBalanceAfter).to.equal(0n);
+            expect(appL2TBalanceAfter - appL2TBalanceBefore).to.equal(0n);
         });
 
 
@@ -360,257 +360,257 @@ describe("ZkRocket", function () {
         });
     });
 
-    describe("LIT calculation", () => {
-        it("LIT calculation, totalBridgeAmount = 0", async function () {
+    describe("L2T calculation", () => {
+        it("L2T calculation, totalBridgeAmount = 0", async function () {
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(0n);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(128n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(256n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(128n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 10254*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 10254*big8-1", async function () {
             let amount = 10254n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(128n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(256n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(128n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 10254*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 10254*big8", async function () {
             let amount = 10254n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(64n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(128n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(64n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 164062*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 164062*big8-1", async function () {
             let amount = 164062n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(64n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(128n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(64n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 164062*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 164062*big8", async function () {
             let amount = 164062n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(32n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(64n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(32n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 1312500*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 1312500*big8-1", async function () {
             let amount = 1312500n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(32n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(64n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(32n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 1312500*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 1312500*big8", async function () {
             let amount = 1312500n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(16n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(32n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(16n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 2625000*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 2625000*big8-1", async function () {
             let amount = 2625000n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(16n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(32n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(16n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 2625000*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 2625000*big8", async function () {
             let amount = 2625000n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(8n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(16n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(8n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 5250000*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 5250000*big8-1", async function () {
             let amount = 5250000n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(8n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(16n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(8n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 5250000*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 5250000*big8", async function () {
             let amount = 5250000n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(4n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(8n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(4n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 10500000*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 10500000*big8-1", async function () {
             let amount = 10500000n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(4n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(8n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(4n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 10500000*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 10500000*big8", async function () {
             let amount = 10500000n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(2n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(4n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(2n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 21000000*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 21000000*big8-1", async function () {
             let amount = 21000000n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(2n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(4n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(2n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 21000000*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 21000000*big8", async function () {
             let amount = 21000000n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(1n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(2n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(1n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 42000000*big8-1", async function () {
+        it("L2T calculation, totalBridgeAmount = 42000000*big8-1", async function () {
             let amount = 42000000n*big8-1n;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(1n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(2n*big18);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(1n*big10);
         });
 
-        it("LIT calculation, totalBridgeAmount = 42000000*big8", async function () {
+        it("L2T calculation, totalBridgeAmount = 42000000*big8", async function () {
             let amount = 42000000n*big8;
             await mockFeePool.setTotalBridgeAmount(amount);
             let totalBridgeAmount = await mockFeePool.totalBridgeAmount();
             expect(totalBridgeAmount).to.equal(amount);
-            let litAmount = await zkRocket.calculateLITAmount(1n*big8);
+            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
             expect (litAmount).to.equal(0n);
 
-            litAmount = await zkRocket.calculateLITAmount(2n*big8);
+            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
             expect (litAmount).to.equal(0n);
 
-            litAmount = await zkRocket.calculateLITAmount(1);
+            litAmount = await zkRocket.calculateL2TAmount(1);
             expect (litAmount).to.equal(0n);
         });
 

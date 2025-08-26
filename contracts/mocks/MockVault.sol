@@ -14,8 +14,6 @@ contract MockVault is IVault, AccessControl {
     /// @notice operator 角色标识
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
-    event ClaimZKBTC(address indexed user, uint256 amount);
-    event ClaimL2T(address indexed user, uint256 amount);
 
     /// ---------- 修饰器 ----------
     modifier onlyAdmin() {
@@ -32,29 +30,28 @@ contract MockVault is IVault, AccessControl {
     constructor(IERC20 _zkBTC, IERC20 _l2t) {
         zkBTC = _zkBTC;
         l2t = _l2t;
-
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
       }
 
 
-    function claimZKBTC(address _to, uint256 _amount) onlyOperator external {
+    function credit(address _to, uint256 _amount) onlyOperator external {
         require(_to != address(0), "Invalid recipient");
         require(_amount > 0, "Amount must be > 0");
         require (zkBTC.balanceOf(address(this)) >= _amount, "Vault balance too low");
         balances[_to] += _amount;
-        emit ClaimZKBTC(_to, _amount);
+        emit Credit(_to, _amount);
     }
 
-    function claimL2T(address _to, uint256 _amount) onlyOperator external {
+    function settle(address _to, uint256 _amount) onlyOperator external {
         require(_to != address(0), "Invalid recipient");
         require(_amount > 0, "Amount must be > 0");
         require (l2t.balanceOf(address(this)) >= _amount, "Vault balance too low");
         bool success = l2t.transfer(_to, _amount);
-        emit ClaimL2T(_to, _amount);
+        require(success, "Transfer failed");
+        emit Settle(_to, _amount);
     }
 
     function investZKBTCTo(address _to, uint256 _amount) external onlyAdmin {
-
         require(_to != address(0), "Invalid recipient");
         require(_amount > 0, "Amount must be > 0");
 
@@ -73,6 +70,4 @@ contract MockVault is IVault, AccessControl {
         bool success = l2t.transfer(_to, _amount);
         require(success, "Transfer failed");
     }
-
-
 }

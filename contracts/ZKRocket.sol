@@ -139,11 +139,11 @@ contract ZKRocket is AccessControl {
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
 
         if (vaults[vaultAddress]) {
-            IVault(vaultAddress).claimZKBTC(userAddress, _info.associatedAmount);
+            IVault(vaultAddress).credit(userAddress, _info.associatedAmount);
 
             if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
-                uint256 litAmount = calculateLITAmount(_info.associatedAmount);
-                IVault(vaultAddress).claimL2T(address(applications[protocolId]), litAmount);
+                uint256 litAmount = calculateL2TAmount(_info.associatedAmount);
+                IVault(vaultAddress).settle(address(applications[protocolId]), litAmount);
             }
         }
 
@@ -168,7 +168,7 @@ contract ZKRocket is AccessControl {
         }
     }
 
-    function calculateLITAmount(uint256 _zkBTCAmount) public view returns (uint256) {
+    function calculateL2TAmount(uint256 _zkBTCAmount) public view returns (uint256) {
         uint256 totalBridgeAmount = feePool.totalBridgeAmount();
 
         uint256 multiplier = 0;
