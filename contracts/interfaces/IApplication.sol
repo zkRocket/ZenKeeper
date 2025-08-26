@@ -5,6 +5,6 @@ import "./IZKRocket.sol";
 import "../types/provenData.sol";
 
 interface IApplication {
-    function execute(address _vault, address _user, bytes32 _txid, ProvenData calldata _info) external;
+    function execute(address _vault, address _user, bytes32 _txid, uint256 _amount, ProvenData calldata _info) external;
 }
 
