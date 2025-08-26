@@ -140,11 +140,11 @@ contract ZKRocket is AccessControl {
 
         if (vaults[vaultAddress]) {
             IVault(vaultAddress).claimZKBTC(userAddress, _info.associatedAmount);
-        }
 
-        if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
-            uint256 litAmount = calculateLITAmount(_info.associatedAmount);
-            IVault(vaultAddress).claimZKLIT(address(applications[protocolId]), litAmount);
+            if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
+                uint256 litAmount = calculateLITAmount(_info.associatedAmount);
+                IVault(vaultAddress).claimZKLIT(address(applications[protocolId]), litAmount);
+            }
         }
 
         if (address(applications[protocolId]) != address(0)) {
