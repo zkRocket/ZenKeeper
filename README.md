@@ -115,7 +115,8 @@ end
  function execute(address vaultAddress, addres userAddress, uint256 amount, Provendata data) external;
 ```
 
-## 测试准备
+## 测试
+### 测试准备
 - deploy zkBTC: 0xeda25EC9CF6BF1800174080CDBddb5779F2F2c1b
 - deploy L2T: 0xF04be284E514e18aF2A69cAC6C8977967581E461
 - deploy vault: 0xBa633eE041e1854bF42A69578028b247d180583D
@@ -133,5 +134,19 @@ end
 - 将zkRocket 设置为vault 的OPERATOR_ROLE： https://sepolia.etherscan.io/tx/0xb637113059035b0815d58e8d97a304010c04a96f3e60e87932206ca406d2b2ea
 
 - 将EOA owner 设置为zkRocket的BRIDGE_ROLE ：https://sepolia.etherscan.io/tx/0xb177b0ecbea749fcdc2d2241a336f467d9d0a6e59ade86e012201fbbb2ce94c8
+
+### 测试用例
+#### 转到用户地址
+```js
+provenData {
+  index: 1,
+  blockHash: '0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c',
+  associatedAmount: 100000000n,
+  data: '0x6a146Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74',
+  retrieved: false
+}
+txid = "0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c";
+```
+https://sepolia.etherscan.io/tx/0xe690cf43411dea0dc85c075c7fb249c9ab0c781fb51f51bdf964158ebe80bf56
 
 
