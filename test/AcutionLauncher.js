@@ -6,7 +6,7 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 
 describe("AuctionLauncher", function () {
-    let zkBTC, zkLIT, zkRocket, mockApp, mockFeePool, auction;
+    let zkBTC, l2t, zkRocket, mockApp, mockFeePool, auction;
     let owner, feeRecipient, user1, user2;
     const big18 = BigInt(10) ** BigInt(18);
     const DURATION = 24 * 60 * 60;
@@ -24,20 +24,20 @@ describe("AuctionLauncher", function () {
         zkBTC = await ZKBTC.deploy();
         await zkBTC.waitForDeployment();
 
-        const ZKLIT = await ethers.getContractFactory("MockZKLIT");
-        zkLIT = await ZKLIT.deploy();
-        await zkLIT.waitForDeployment();
+        const L2T = await ethers.getContractFactory("MockL2T");
+        l2t = await L2T.deploy();
+        await l2t.waitForDeployment();
 
         const MockFeePool = await ethers.getContractFactory("MockFeePool");
         mockFeePool = await MockFeePool.deploy();
         await mockFeePool.waitForDeployment();
 
         const ZKRocket = await ethers.getContractFactory("ZKRocket");
-        zkRocket = await ZKRocket.deploy(await zkBTC.getAddress(), await zkLIT.getAddress(), await mockFeePool.getAddress());
+        zkRocket = await ZKRocket.deploy(await zkBTC.getAddress(), await l2t.getAddress(), await mockFeePool.getAddress());
         await zkRocket.waitForDeployment();
 
         const MockApp = await ethers.getContractFactory("MockApp");
-        mockApp = await MockApp.deploy(await zkBTC.getAddress(), await zkLIT.getAddress());
+        mockApp = await MockApp.deploy(await zkBTC.getAddress(), await l2t.getAddress());
         await mockApp.waitForDeployment();
 
         const AuctionLauncher = await ethers.getContractFactory("AuctionLauncher");
@@ -74,7 +74,7 @@ describe("AuctionLauncher", function () {
             expect(await auction.zkBTC()).to.equal(await zkBTC.getAddress());
 
             expect(await zkRocket.zkBTC()).to.equal(await zkBTC.getAddress());
-            expect(await zkRocket.zkLIT()).to.equal(await zkLIT.getAddress());
+            expect(await zkRocket.l2t()).to.equal(await l2t.getAddress());
             expect(await zkRocket.hasRole(await zkRocket.AUCTION_LAUNCHER_ROLE(), auction.getAddress())).is.true;
             expect(await zkRocket.hasRole(await zkRocket.BRIDGE_ROLE(), owner.address)).is.true;
         });
