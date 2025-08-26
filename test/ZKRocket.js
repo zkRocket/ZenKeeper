@@ -303,6 +303,29 @@ describe("ZkRocket", function () {
             expect(vaultL2TBalanceBefore).to.equal(vaultL2TBalanceAfter);
         });
 
+        it("to vault address not belong to zkRocket and App， appdata length= 132001", async function () {
+            let vaultAddress = await user2.address;
+            // 构造 29 bytes 的 appData，填充 0
+            let appData = "55".repeat(132001);
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
+            let len = (data.length/2).toString(16).padStart(8, "0");
+            data = "0x6a4e" + len + data;
+
+            const provenData = {
+                index: 1,
+                blockHash: txid,
+                associatedAmount: amount, // 10*1e8
+                data: data,
+                retrieved: false
+            };
+
+            await expect(
+                zkRocket.retrieve(provenData, txid)
+            ).to.emit(mockApp, "Execute");
+
+        });
+
+
         it("to mockVault address， no protocol,  appdata length= 132001", async function () {
             let vaultAddress = await mockVault.getAddress();
             let appData = "55".repeat(132001);
