@@ -85,7 +85,7 @@ sequenceDiagram
     participant zkBridge
     participant zkRocket
     participant vault
-    participant zkRunes 
+    participant zkApp 
 
 user ->> zkBridge: retrieve(txid)
 zkBridge ->> zkBridge: if retrieved == true, revert 
@@ -93,22 +93,19 @@ zkBridge ->> zkRocket: retrieve(index, blockHash, amount, data)
 zkRocket ->> zkRocket: decode data 得到 vaultAddress, userAddress, protocolId
 Note over zkRocket, vault: zkRocket's vault 
 alt vault[vaultAddress] == true 
-    zkRocket ->> vault: claim(userAddress, amount, userOption)
+    zkRocket ->> vault: credit(userAddress, amount) //为用户的zkBTC 记账
     
-    alt withdraw==true
-        vault->>vault: IERC20(zkBTC).transfer(userAddress, amount) //将zkBTC转给用户
-    else 
-        vault->>vault: balance[userAddress] += amount //给用户记账
+    alt applications[protolId] != vaultAddress && applications[protolId] != address(0) //用户参与其他的应用
+        litAmount = calculateL2TAmount(_info.associatedAmount); //计算出用户应得到L2T
+        vault->>vault:  IVault(vaultAddress).settle(address(applications[protocolId]), litAmount) //将zkBTC转给用户
     end
-    vault ->> zkRocket:
-    zkRocket ->>zkRocket: vaultAddress = 0, userAddress =0, amount = 0
 end 
 
 
 alt applications[protocolId] != address(0)
-  zkRocket->>zkRunes:  execute(vaultAddress, userAddress, userOption, amount, appData)
+  zkRocket->>zkApp:  execute(vaultAddress, userAddress, amount, data)
 else applications[protocolId] == address(0)
-  Note over zkRocket, zkRunes: do nothing 
+  Note over zkRocket, zkApp: do nothing 
 end
 zkRocket->>zkBridge:
 zkBridge->>zkBridge: retrieved =true
