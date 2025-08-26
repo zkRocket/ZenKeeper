@@ -6,9 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IZKRocket.sol";
 import "./interfaces/IVault.sol";
-import "./interfaces/IFeePool.sol";
-import "hardhat/console.sol";
-import {ITokenomicsModel} from "./interfaces/ITokenomicsModel.sol";
+import "./interfaces/ITokenomicsModel.sol";
 
 
 contract ZKRocket is AccessControl {
