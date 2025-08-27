@@ -142,7 +142,7 @@ end
 - 将tong的EOA 设置为zkRocket的ADMIN_ROLE ：
 https://sepolia.etherscan.io/tx/0xf125bbb42d136644dd4550b029a0c7b4479baccf2ef7de19c07d1d9c0088b061  
 
-### 测试用例(旧版本的测试用例)
+### 测试用例
 #### 转到用户地址
 ```js
 provenData {
