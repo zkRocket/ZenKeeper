@@ -6,8 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IZKRocket.sol";
 import "./interfaces/IVault.sol";
-import "./interfaces/IFeePool.sol";
-import "hardhat/console.sol";
+import "./interfaces/ITokenomicsModel.sol";
 
 
 contract ZKRocket is AccessControl {
@@ -16,11 +15,12 @@ contract ZKRocket is AccessControl {
     uint256 public zkBTCDecimals;
     uint256 public l2tDecimals;
 
-    IFeePool immutable public feePool;
+    ITokenomicsModel immutable public tokenomicsModel;
+    uint256 public immutable largeAmountThreshold;
     mapping(address => bool) public vaults;
     uint16 public nextProtocolId = 1;
     mapping(uint16 => IApplication) public applications;
-    uint256[2][8] public l2tMintTable;
+    uint256[8] public l2tMintTable;
 
     /// @notice operator 角色标识
     bytes32 public constant AUCTION_LAUNCHER_ROLE = keccak256("AUCTION_LAUNCHER_ROLE");
@@ -51,23 +51,19 @@ contract ZKRocket is AccessControl {
         _;
     }
 
-    constructor(IERC20Metadata _zkBTC, IERC20Metadata _l2t, IFeePool _feePool) {
+    constructor(IERC20Metadata _zkBTC, IERC20Metadata _l2t, ITokenomicsModel _tokenomicsModel) {
         zkBTC = _zkBTC;
         l2t = _l2t;
-        feePool = _feePool;
 
         zkBTCDecimals = zkBTC.decimals();
         l2tDecimals = l2t.decimals();
         require(l2tDecimals >= zkBTCDecimals, "Decimals mismatch");
         uint256 decimalsDiff = l2tDecimals - zkBTCDecimals;
-        l2tMintTable[0] = [uint256(10254*10**zkBTCDecimals), 128*10**decimalsDiff];
-        l2tMintTable[1] = [uint256(164062*10**zkBTCDecimals), 64*10**decimalsDiff];
-        l2tMintTable[2] = [uint256(1312500*10**zkBTCDecimals), 32*10**decimalsDiff];
-        l2tMintTable[3] = [uint256(2625000*10**zkBTCDecimals), 16*10**decimalsDiff];
-        l2tMintTable[4] = [uint256(5250000*10**zkBTCDecimals), 8*10**decimalsDiff];
-        l2tMintTable[5] = [uint256(10500000*10**zkBTCDecimals), 4*10**decimalsDiff];
-        l2tMintTable[6] = [uint256(21000000*10**zkBTCDecimals), 2*10**decimalsDiff];
-        l2tMintTable[7] = [uint256(42000000*10**zkBTCDecimals), 1*10**decimalsDiff]; //<=
+        l2tMintTable = [uint256(128*10**decimalsDiff), 64*10**decimalsDiff, 32*10**decimalsDiff, 16*10**decimalsDiff, 8*10**decimalsDiff, 4*10**decimalsDiff, 2*10**decimalsDiff, 1*10**decimalsDiff];
+
+        tokenomicsModel = _tokenomicsModel;
+        largeAmountThreshold = uint256(tokenomicsModel.LARGE_AMOUNT_THRESHOLD());
+
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
@@ -139,8 +135,9 @@ contract ZKRocket is AccessControl {
 
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
 
+        uint256 zkBTCAmount = calculateZKBTCAmount(_info.associatedAmount);
         if (vaults[vaultAddress]) {
-            IVault(vaultAddress).credit(userAddress, _info.associatedAmount);
+            IVault(vaultAddress).credit(userAddress, zkBTCAmount);
 
             if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
                 uint256 litAmount = calculateL2TAmount(_info.associatedAmount);
@@ -149,7 +146,7 @@ contract ZKRocket is AccessControl {
         }
 
         if (address(applications[protocolId]) != address(0)) {
-            IApplication(applications[protocolId]).execute(vaultAddress, userAddress, _txid, _info);
+            IApplication(applications[protocolId]).execute(vaultAddress, userAddress, _txid, zkBTCAmount, _info);
         }
     }
 
@@ -170,20 +167,30 @@ contract ZKRocket is AccessControl {
     }
 
     function calculateL2TAmount(uint256 _zkBTCAmount) public view returns (uint256) {
-        uint256 totalBridgeAmount = feePool.totalBridgeAmount();
+        uint256 round = tokenomicsModel.startRound();
 
         uint256 multiplier = 0;
-        for (uint i = 0; i < l2tMintTable.length; i++) {
-            if (totalBridgeAmount < l2tMintTable[i][0]) {
-                multiplier = l2tMintTable[i][1];
-                break;
-            }
+        if (round < l2tMintTable.length) {
+            multiplier = l2tMintTable[round];
         }
         if (multiplier == 0) {
             return 0;
         }else {
-            return _zkBTCAmount * multiplier;
+            return (_zkBTCAmount * multiplier * 9)/10;
         }
+    }
+
+    function calculateZKBTCAmount(uint256 _zkBTCAmount) public view returns (uint256) {
+        uint256 round = tokenomicsModel.startRound();
+        uint256 feeRate = 0;
+        if (_zkBTCAmount < largeAmountThreshold) {
+            feeRate = tokenomicsModel.smallAmountFeeRates(round);
+        }else {
+            feeRate = tokenomicsModel.largeAmountFeeRates(round);
+        }
+
+        uint256 fee = _zkBTCAmount * feeRate / 10000;
+        return _zkBTCAmount - fee;
     }
 
 }

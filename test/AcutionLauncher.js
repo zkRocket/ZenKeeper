@@ -6,7 +6,7 @@ const { anyValue } = require("@nomicfoundation/hardhat-chai-matchers/withArgs");
 const { expect } = require("chai");
 
 describe("AuctionLauncher", function () {
-    let zkBTC, l2t, zkRocket, mockApp, mockFeePool, auction;
+    let zkBTC, l2t, zkRocket, mockApp, mockTokenomics, auction;
     let owner, feeRecipient, user1, user2;
     const big18 = BigInt(10) ** BigInt(18);
     const DURATION = 24 * 60 * 60;
@@ -28,12 +28,12 @@ describe("AuctionLauncher", function () {
         l2t = await L2T.deploy();
         await l2t.waitForDeployment();
 
-        const MockFeePool = await ethers.getContractFactory("MockFeePool");
-        mockFeePool = await MockFeePool.deploy();
-        await mockFeePool.waitForDeployment();
+        const MockTokenomics = await ethers.getContractFactory("MockTokenomics");
+        mockTokenomics = await MockTokenomics.deploy();
+        await mockTokenomics.waitForDeployment();
 
         const ZKRocket = await ethers.getContractFactory("ZKRocket");
-        zkRocket = await ZKRocket.deploy(await zkBTC.getAddress(), await l2t.getAddress(), await mockFeePool.getAddress());
+        zkRocket = await ZKRocket.deploy(await zkBTC.getAddress(), await l2t.getAddress(), await mockTokenomics.getAddress());
         await zkRocket.waitForDeployment();
 
         const MockApp = await ethers.getContractFactory("MockApp");
