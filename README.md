@@ -153,52 +153,37 @@ provenData {
   retrieved: false
 }
 txid = "0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c";
+[1, 0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c,100000000,0x6a146Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74,false]
 ```
-https://sepolia.etherscan.io/tx/0xe690cf43411dea0dc85c075c7fb249c9ab0c781fb51f51bdf964158ebe80bf56
+https://sepolia.etherscan.io/tx/0x2f4102941c16ee3590fb13584b4350d1bad73dbc992a05a9b3ed8bde28bf1ee5
 
 #### 转移到vault地址，但是参与mockApp，
 ```js
-provenData {
-  index: 1,
-  blockHash: '0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c',
-  associatedAmount: 100000000n,
-  data: '0x6a2bBa633eE041e1854bF42A69578028b247d180583D0000016Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74',
-  retrieved: false
-}
 txid = "0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c";
+[1, 0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c,100000000,0x6a2bBa633eE041e1854bF42A69578028b247d180583D0000016Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74,false]
 ```
-https://sepolia.etherscan.io/tx/0xb8faf3ae9306368a10db82402f1200961725c6c9b51308bb3d930dff10dcad93
+https://sepolia.etherscan.io/tx/0x0a3de729b8f465e443affd79cf320b0803e5e20f4064bee6cd20c6c261356595#eventlog
 
-#### 转移到mockApp地址， mockApp 同时不是受zkRocket控制的vault ，
+#### 转移到mockAp1p地址， mockApp 同时不是受zkRocket控制的vault ，
 ```js
-provenData {
-  index: 1,
-  blockHash: '0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c',
-  associatedAmount: 100000000n,
-  data: '0x6a2b131d73C228BfA36F81f15D3052E0a723427494b00000016Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74',
-  retrieved: false
-}
+
 txid = "0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c";
+[1, 0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c,100000000,0x6a2b17730D1B29766d1Ff32D1b5554850061d9Ab81780000016Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74,false]
 ```
-https://sepolia.etherscan.io/tx/0x77dde119340efc496b583d525e088259e8af2736b966697d2c69c1581d72b41f
+https://sepolia.etherscan.io/tx/0x5c70b6b12dff2a8524fbf3ee3cfd530625a64a4beb4e4401267442ac2d915a47
 
 #### 转移到mockApp地址， mockApp 同时是受zkRocket控制的vault，
-- add mockApp2 as zkRocket's vault: https://sepolia.etherscan.io/tx/0xf65f3fbac1ff0d14d5cbf46f2070c14cd9ecbc5376cad77cd2c18dd1fb55631e
-- register mockApp2 into zkRocket
-https://sepolia.etherscan.io/tx/0xf52ea241c75b2cfb37ec254dbd97dd22d91af9c71d72554eba92b594bd351d8d   
+- add mockApp2 as zkRocket's vault:
+https://sepolia.etherscan.io/tx/0xf8cfd4e360c8ecae9b1cd458bc45db4eef1aa829e9f212e0314e91b51e9bfeff
+
 - grant zkRocket as operator to mockApp2
-https://sepolia.etherscan.io/tx/0x3d68e104961103541138a9838438337c42faf465bfb1da1af6e698be487afc11   
-- mint zkBTC to mockApp2:https://sepolia.etherscan.io/tx/0x3971ad84e4ef3f9f5986675aeeb5c730bb259e85068a3b230ce8f53909df8259
-- mint L2T to mockApp2:https://sepolia.etherscan.io/tx/0xdfd76e69c868b13fe4dd0a2cc66d91890334399ad5d0351baa26ff6be28d686f 
+https://sepolia.etherscan.io/tx/0x96266a1e0f7866ce67411622f9006efee56dee8db1ab815aec9d0c57813bba14
+- mint zkBTC to mockApp2:https://sepolia.etherscan.io/tx/0x40f320088ea171b515fee1820b91c97b015c014290cd6bbf81cf66f31c9c9336
+- mint L2T to mockApp2: https://sepolia.etherscan.io/tx/0x30865675c04e6615523a1c5fbb71dbb5a1b278a5706cfe13ed4dd3a69a9bfb0b
 ```js
-provenData {
-  index: 1,
-  blockHash: '0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c',
-  associatedAmount: 100000000n,
-  data: '0x6a2b891bA1E6c999333f8245BA275d61F391439E37B40000036Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74',
-  retrieved: false
-}
+
 txid = "0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c";
+[1, 0x82c68e42a344925588d5485ca1d910ea3e1f381dc9e9735d14e6574a7fc0518c,100000000,0x6a2b8723BD7363bd2eD14ED1914512fAFc15F7D727C80000016Ee0a1f264d6690Fa6DeC24ADb78AC291dF33d74,false]
 ```
-https://sepolia.etherscan.io/tx/0x156c464d1acb0dc57ecb2973a3f727c821d2f8efa3456ff59f465f54b871b7dd
+https://sepolia.etherscan.io/tx/0xae1120c4e943b24da117c639eefaa46fe14e1606976b974e837500f5b046a2eb
 
