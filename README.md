@@ -120,22 +120,27 @@ end
 - deploy zkBTC: 0xeda25EC9CF6BF1800174080CDBddb5779F2F2c1b
 - deploy L2T: 0xF04be284E514e18aF2A69cAC6C8977967581E461
 - deploy vault: 0xBa633eE041e1854bF42A69578028b247d180583D
-- deploy feepool: 0x09feeCff308d1f2fDAD8350257B9eDE28AC7d867
-- deploy zkRocket: 0x3637D61702d54e2a2325165A4664d731bFf9f82F
-- deploy mokcApp1: 0xe8311A3eDDB232ED554883d937257E5D5D45b029
-- deploy mockApp2: 0x868E9389C39B4ceD8CC0657fDde86f493B07A7ec
+- deploy tokenomics: 0x7C51d7D336aFdAc8E0beD39D5AAdCE49084dCb41
+- deploy zkRocket: 0x8670c96804f6eB4CC6A5bea61d94Cf7e81EFd7cC
+- deploy mokcApp1: 0x17730D1B29766d1Ff32D1b5554850061d9Ab8178
+- deploy mockApp2: 0x8723BD7363bd2eD14ED1914512fAFc15F7D727C8
 - deploy 盲盒: 
-- zkRocket中添加 mockApp1, 协议代号1: https://sepolia.etherscan.io/tx/0x64e763c9297377bdf4e884660a1f23b05bc34caab8fd8f0177e32a1399bc1970
-- zkRocket中添加 mockApp2， 协议代号2: https://sepolia.etherscan.io/tx/0xd9cf0bc572b2070bee636c6cb68e9ab6479983403b5abd29fab1c01bfca19b6e
-- 将vault 增加到zkRocket中：https://sepolia.etherscan.io/tx/0xc1c4ec1ba58dfb12342e4ee7a9334afe333eb7932d9f447601c227bc0bbc8ce2
+- zkRocket中添加 mockApp1, 协议代号1: https://sepolia.etherscan.io/tx/0x00a1646bea29780000d0370ec1c3acaf99534f4e646e786f9c8262ba57948a73
+- zkRocket中添加 mockApp2， 协议代号2:  https://sepolia.etherscan.io/tx/0xe7242697502290aa1762434e2de69a06c2e927733875733f5c3b0d9782539783
+- 将vault 增加到zkRocket中：https://sepolia.etherscan.io/tx/0xbfd26579bd070f4a77f4efa635638be5049538ce67328dd0caac579a90e0b5fa
 
 - mint 1000 zkBTC to vault: https://sepolia.etherscan.io/tx/0x3233c69c6423af0e67e486d7ffecc7c70aed0fc9064ec042d1ff8b20e5ce98f8
 - mint 128000 L2 to vault: https://sepolia.etherscan.io/tx/0x37ffda118a26003202f60afadaa68c431115c447fb0f73482e456234e982505c
 
-- 将zkRocket 设置为vault 的OPERATOR_ROLE：
-https://sepolia.etherscan.io/tx/0xa6aa5587cf29347bd5cc81680f1645b26135074129a133bce4a46c547e54a2c9
+- 将zkRocket 设置为vault 的OPERATOR_ROLE：https://sepolia.etherscan.io/tx/0xa0e0c41c5272449e5990b261dec04a466eac09e84ff1f3aef73da849007fa61d
 
-- 将EOA owner 设置为zkRocket的BRIDGE_ROLE ：https://sepolia.etherscan.io/tx/0x87d69ec05a672d117426a7c7ace3d69be7b116e516153a97cb5fca7685986a7a
+- 将keep EOA owner 设置为zkRocket的BRIDGE_ROLE ：https://sepolia.etherscan.io/tx/0x5c810f55b4c3617fe0229bc42cf783579e63d7d88a81fc3efd41814bfd60d80f
+
+- 将tong的EOA 设置为zkRocket的BRIDGE_ROLE ：
+  https://sepolia.etherscan.io/tx/0x0155a865ee3fdaf5459485115c72c90fe3b93e1cce338093e9357bfe39aa2170
+  
+- 将tong的EOA 设置为zkRocket的ADMIN_ROLE ：
+https://sepolia.etherscan.io/tx/0xf125bbb42d136644dd4550b029a0c7b4479baccf2ef7de19c07d1d9c0088b061  
 
 ### 测试用例(旧版本的测试用例)
 #### 转到用户地址
