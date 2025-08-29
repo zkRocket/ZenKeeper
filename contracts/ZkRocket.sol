@@ -95,9 +95,7 @@ contract ZKRocket is AccessControl {
     */
 
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
-        if (_info.data.length < 45){
-            return;
-        }
+       require(_info.data.length >= 45, "Invalid data");
 
         bytes memory data = _info.data;
         uint256 vaultAddressOffset = 0;
