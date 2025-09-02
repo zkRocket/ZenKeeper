@@ -139,7 +139,9 @@ contract ZKRocket is AccessControl {
 
             if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
                 uint256 litAmount = calculateL2TAmount(_info.associatedAmount);
-                IVault(vaultAddress).settle(address(applications[protocolId]), litAmount);
+                if (litAmount > 0){
+                    IVault(vaultAddress).settle(address(applications[protocolId]), litAmount);
+                }
             }
         }
 
