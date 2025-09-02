@@ -142,21 +142,20 @@ describe("ZkRocket", function () {
 
             await expect(
                 zkRocket.retrieve(provenData, txid)
-            ).to.not.be.reverted;
+            ).to.be.revertedWith("Invalid data");
          });
 
-        it("to MockVault address，no app data", async function () {
+        it("to MockVault address，no app data, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
             let len = (data.length/2).toString(16);
             data = "0x6a" + len + data;
 
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
-
         });
 
 
-        it("to mockVault address，appdata length= 32", async function () {
+        it("to mockVault address，appdata length= 32, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             let appData = "55".repeat(32);
             let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "") +appData;
@@ -168,7 +167,7 @@ describe("ZkRocket", function () {
         });
 
 
-        it("to mockVault address，  appdata length= 33", async function () {
+        it("to mockVault address，  appdata length= 33, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(33);
@@ -178,7 +177,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockVault address，  appdata length= 212", async function () {
+        it("to mockVault address，  appdata length= 212, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(212);
@@ -188,7 +187,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockVault address，  appdata length= 213", async function () {
+        it("to mockVault address，  appdata length= 213, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(213);
@@ -198,7 +197,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockVault address，  appdata length= 214", async function () {
+        it("to mockVault address，  appdata length= 214, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(214);
@@ -209,7 +208,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockVault address，  appdata length= 65492", async function () {
+        it("to mockVault address，  appdata length= 65492, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65492);
@@ -220,7 +219,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockVault address，  appdata length= 65493", async function () {
+        it("to mockVault address，  appdata length= 65493, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65493);
@@ -239,7 +238,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockVault address，  appdata length= 65494", async function () {
+        it("to mockVault address，  appdata length= 65494, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(65494);
@@ -250,7 +249,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockVault address，  appdata length= 132001", async function () {
+        it("to mockVault address，  appdata length= 132001, startRound = 0", async function () {
             let vaultAddress = await mockVault.getAddress();
             // 构造 29 bytes 的 appData，填充 0
             let appData = "55".repeat(132001);
@@ -260,7 +259,7 @@ describe("ZkRocket", function () {
             await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
         });
 
-        it("to mockApp address， appdata length= 132001", async function () {
+        it("to mockApp address， appdata length= 132001, startRound = 0", async function () {
             await zkRocket.addVault(await mockApp.getAddress());
             await zkBTC.mint(await mockApp.getAddress(), 1000n *big18);
             expect(await zkBTC.balanceOf(await mockApp.getAddress())).to.equal(1000n * big18);
@@ -365,7 +364,113 @@ describe("ZkRocket", function () {
             expect(appL2TBalanceAfter - appL2TBalanceBefore).to.equal(0n);
         });
 
+        it("to MockVault address，no app data, startRound = 1", async function () {
+            await mockTokenomics.setStartRound(1);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(1);
 
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 2", async function () {
+            await mockTokenomics.setStartRound(2);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(2);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 3", async function () {
+            await mockTokenomics.setStartRound(3);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(3);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 4", async function () {
+            await mockTokenomics.setStartRound(4);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(4);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 5", async function () {
+            await mockTokenomics.setStartRound(5);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(5);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 6", async function () {
+            await mockTokenomics.setStartRound(6);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(6);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 7", async function () {
+            await mockTokenomics.setStartRound(7);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(7);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 8", async function () {
+            await mockTokenomics.setStartRound(8);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(8);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
+
+        it("to MockVault address，no app data, startRound = 9", async function () {
+            await mockTokenomics.setStartRound(9);
+            let round = await mockTokenomics.startRound();
+            expect(round).to.equal(9);
+
+            let vaultAddress = await mockVault.getAddress();
+            let data=  vaultAddress.replace("0x", "") + "00" + "0001" + owner.address.replace("0x", "")
+            let len = (data.length/2).toString(16);
+            data = "0x6a" + len + data;
+            await checkRetrieveAndBalances(data, amount, txid, zkRocket, zkBTC, l2t, mockVault, mockApp, owner);
+        });
 
     });
 
