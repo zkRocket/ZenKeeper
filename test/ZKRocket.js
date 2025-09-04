@@ -683,18 +683,6 @@ describe("ZkRocket", function () {
 
         });
 
-        it("zkBTC calculation, round = 7", async function () {
-            let i = 8;
-            await mockTokenomics.setStartRound(i);
-            let round = await mockTokenomics.startRound();
-            expect(round).to.equal(i);
-
-            let bigAmount = await zkRocket.calculateZKBTCAmount(10n * big8);
-            expect(bigAmount).to.equal(999800000n);
-            let smallAmount = await zkRocket.calculateZKBTCAmount(1n * big8);
-            expect(smallAmount).to.equal(99930000n);
-
-        });
 
         it("zkBTC calculation, round = 8", async function () {
             let i = 8;
