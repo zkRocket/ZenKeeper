@@ -96,8 +96,8 @@ alt vault[vaultAddress] == true  //vault是zkRocket的金库
     zkRocket ->> vault: credit(userAddress, amount) //为用户的zkBTC 记账
     
     alt applications[protolId] != vaultAddress && applications[protolId] != address(0) //用户参与其他的应用
-        zkRocket->>zkRocket: litAmount = calculateL2TAmount(_info.associatedAmount)    // 计算L2T 数量
-        vault->>vault:  IVault(vaultAddress).settle(address(applications[protocolId]), litAmount) //将zkBTC转给用户
+        zkRocket->>zkRocket: l2tAmount = calculateL2TAmount(_info.associatedAmount)    // 计算L2T 数量
+        vault->>vault:  IVault(vaultAddress).settle(address(applications[protocolId]), l2tAmount) //将zkBTC转给用户
     end
 end 
 

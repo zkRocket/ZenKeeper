@@ -117,8 +117,8 @@ describe("ZkRocket", function () {
         expect(vaultL2TBalanceBefore - vaultL2TBalanceAfter)
             .to.equal(appL2TBalanceAfter - appL2TBalanceBefore);
 
-        let litAmount = await zkRocket.calculateL2TAmount(amount);
-        expect(appL2TBalanceAfter).to.equal(litAmount);
+        let l2tAmount = await zkRocket.calculateL2TAmount(amount);
+        expect(appL2TBalanceAfter).to.equal(l2tAmount);
     }
 
     beforeEach(async function (){
@@ -540,14 +540,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(0);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(128n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(128n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(256n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(256n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(128n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(128n*big10*9n/10n);
         });
 
         it("L2T calculation, round = 1", async function () {
@@ -555,14 +555,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(1);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(64n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(64n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(128n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(128n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(64n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(64n*big10*9n/10n);
         });
 
         it("L2T calculation, round = 2", async function () {
@@ -570,14 +570,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(2);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(32n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(32n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(64n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(64n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(32n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(32n*big10*9n/10n);
         });
 
         it("L2T calculation, round = 3", async function () {
@@ -585,14 +585,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(3);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(16n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(16n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(32n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(32n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(16n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(16n*big10*9n/10n);
         });
 
         it("L2T calculation, round = 4", async function () {
@@ -600,14 +600,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(4);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(8n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(8n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(16n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(16n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(8n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(8n*big10*9n/10n);
         });
 
         it("L2T calculation, round = 5", async function () {
@@ -615,14 +615,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(5);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(4n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(4n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(8n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(8n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(4n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(4n*big10*9n/10n);
         });
 
         it("L2T calculation, round = 6", async function () {
@@ -630,14 +630,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(6);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(2n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(2n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(4n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(4n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(2n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(2n*big10*9n/10n);
         });
 
         it("L2T calculation, round = 7", async function () {
@@ -645,14 +645,14 @@ describe("ZkRocket", function () {
             let round = await mockTokenomics.startRound();
             expect(round).to.equal(7);
 
-            let litAmount = await zkRocket.calculateL2TAmount(1n*big8);
-            expect (litAmount).to.equal(1n*big18*9n/10n);
+            let l2tAmount = await zkRocket.calculateL2TAmount(1n*big8);
+            expect (l2tAmount).to.equal(1n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(2n*big8);
-            expect (litAmount).to.equal(2n*big18*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(2n*big8);
+            expect (l2tAmount).to.equal(2n*big18*9n/10n);
 
-            litAmount = await zkRocket.calculateL2TAmount(1);
-            expect (litAmount).to.equal(1n*big10*9n/10n);
+            l2tAmount = await zkRocket.calculateL2TAmount(1);
+            expect (l2tAmount).to.equal(1n*big10*9n/10n);
         });
     });
 
