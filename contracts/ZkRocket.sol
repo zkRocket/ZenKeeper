@@ -138,9 +138,9 @@ contract ZKRocket is AccessControl {
             IVault(vaultAddress).credit(userAddress, zkBTCAmount);
 
             if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
-                uint256 litAmount = calculateL2TAmount(_info.associatedAmount);
-                if (litAmount > 0){
-                    IVault(vaultAddress).settle(address(applications[protocolId]), litAmount);
+                uint256 l2tAmount = calculateL2TAmount(_info.associatedAmount);
+                if (l2tAmount > 0){
+                    IVault(vaultAddress).settle(address(applications[protocolId]), l2tAmount);
                 }
             }
         }
@@ -169,15 +169,10 @@ contract ZKRocket is AccessControl {
     function calculateL2TAmount(uint256 _zkBTCAmount) public view returns (uint256) {
         uint256 round = tokenomicsModel.startRound();
 
-        uint256 multiplier = 0;
         if (round < l2tMintTable.length) {
-            multiplier = l2tMintTable[round];
+            return (_zkBTCAmount * l2tMintTable[round] * 9)/10;
         }
-        if (multiplier == 0) {
-            return 0;
-        }else {
-            return (_zkBTCAmount * multiplier * 9)/10;
-        }
+        return 0;
     }
 
     function calculateZKBTCAmount(uint256 _zkBTCAmount) public view returns (uint256) {
