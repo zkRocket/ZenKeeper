@@ -123,13 +123,8 @@ contract ZKRocket is AccessControl {
         }
 
         // 解析字段
-        address vaultAddress;
-        address userAddress;
-
-        assembly {
-            vaultAddress := shr(96, mload(add(add(data, 0x20), vaultAddressOffset)))
-            userAddress := shr(96, mload(add(add(data, 0x20), add(vaultAddressOffset, 23))))
-           }
+        address vaultAddress = bytesToAddress(data, vaultAddressOffset);
+        address userAddress = bytesToAddress(data, vaultAddressOffset + 23);
 
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
 
@@ -148,6 +143,12 @@ contract ZKRocket is AccessControl {
 
         if (appAddress != address(0)) {
             IApplication(appAddress).execute(vaultAddress, userAddress, _txid, zkBTCAmount, _info);
+        }
+    }
+
+    function bytesToAddress(bytes memory data, uint256 offset) private pure returns (address result) {
+        assembly {
+            result := shr(96, mload(add(add(data, 0x20), offset)))
         }
     }
 
