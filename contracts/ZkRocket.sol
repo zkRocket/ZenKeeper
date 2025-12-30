@@ -134,18 +134,19 @@ contract ZKRocket is AccessControl {
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
 
         uint256 zkBTCAmount = calculateZKBTCAmount(_info.associatedAmount);
+        address appAddress = address(applications[protocolId]);
         if (vaults[vaultAddress]) {
             IVault(vaultAddress).credit(userAddress, zkBTCAmount);
 
-            if ((address(applications[protocolId]) != vaultAddress) && (address(applications[protocolId]) != address(0))) {
+            if ((appAddress != vaultAddress) && (appAddress != address(0))) {
                 uint256 l2tAmount = calculateL2TAmount(_info.associatedAmount);
                 if (l2tAmount > 0){
-                    IVault(vaultAddress).settle(address(applications[protocolId]), l2tAmount);
+                    IVault(vaultAddress).settle(appAddress, l2tAmount);
                 }
             }
         }
 
-        if (address(applications[protocolId]) != address(0)) {
+        if (appAddress != address(0)) {
             IApplication(applications[protocolId]).execute(vaultAddress, userAddress, _txid, zkBTCAmount, _info);
         }
     }
