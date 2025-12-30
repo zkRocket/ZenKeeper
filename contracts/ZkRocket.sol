@@ -151,22 +151,6 @@ contract ZKRocket is AccessControl {
         }
     }
 
-    function sliceFrom(bytes memory data, uint256 offset) public pure returns (bytes memory result) {
-        require(offset <= data.length, "Offset out of bounds");
-
-        uint256 newLength = data.length - offset;
-        result = new bytes(newLength);
-
-        assembly {
-            let src := add(add(data, 0x20), offset) // 指向 data[offset] 的位置
-            let dest := add(result, 0x20)           // 指向 result 内容开始位置
-
-            for { let i := 0 } lt(i, newLength) { i := add(i, 0x20) } {
-                mstore(add(dest, i), mload(add(src, i)))
-            }
-        }
-    }
-
     function calculateL2TAmount(uint256 _zkBTCAmount) public view returns (uint256) {
         uint256 round = tokenomicsModel.startRound();
 
