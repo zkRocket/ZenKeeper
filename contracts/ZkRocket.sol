@@ -126,6 +126,9 @@ contract ZKRocket is AccessControl {
         address vaultAddress = bytesToAddress(data, vaultAddressOffset);
         address userAddress = bytesToAddress(data, vaultAddressOffset + 23);
 
+        uint8 chainId = uint8(data[vaultAddressOffset + 20]);
+        require (chainId == 0, "not intended for Ethereum");
+
         uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
 
         uint256 zkBTCAmount = calculateZKBTCAmount(_info.associatedAmount);
