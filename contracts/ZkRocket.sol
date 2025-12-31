@@ -111,12 +111,12 @@ contract ZKRocket is AccessControl {
                 l = uint8(data[2]);
                 vaultAddressOffset = 3;
             } else if (opcode == 0x4d) {
-                l = (uint16(uint8(data[2])) << 8) + uint8(data[3]);
+                l = (uint16(uint8(data[3])) << 8) + uint8(data[2]);
                 vaultAddressOffset = 4;
             } else if (opcode == 0x4e) {
-                l = (uint32(uint8(data[2])) << 24) +
-                    (uint32(uint8(data[3])) << 16) +
-                    (uint32(uint8(data[4])) << 8) + uint32(uint8(data[5]));
+                l = (uint32(uint8(data[5])) << 24) +
+                    (uint32(uint8(data[4])) << 16) +
+                    (uint32(uint8(data[3])) << 8) + uint32(uint8(data[2]));
                 vaultAddressOffset = 6;
             }
             require(l == data.length-vaultAddressOffset, "Invalid data length");

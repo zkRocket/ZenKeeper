@@ -1,44 +1,38 @@
 # ZenKeeper
-The ZenKeeper Protocol, a protocol for Bitcoin-based assets, based on the zkBTC cross-chain capabilities.
+The ZenKeeper Protocol is a protocol for Bitcoin-based assets, based on the zkBTC cross-chain capabilities.
 
-## Vault 合约
-Vault 是一个可托管zkBTC资产的金库合约，在deposit时，用于接收过桥的zkBTC 以及奖励的的L2T Token. 该合约提供一个credit和settle接口，
-- credit：用于在vault合约中给用户zkBTC记账。
-- settle：将vault合约中的L2T转移到别的地址
-这两个接口应该只被有特定权限的合约访问，例如zkRocket 或者zkApp
-```solidity
-    function credit(address _to, uint256 _amount) onlyOperator external {
-        require(_to != address(0), "Invalid recipient");
-        require(_amount > 0, "Amount must be > 0");
-        require (zkBTC.balanceOf(address(this)) >= _amount, "Vault balance too low");
-        balances[_to] += _amount;
-        emit Credit(_to, _amount);
-    }
+## the ZenKeeper Protocol and its Data Format
+The [zkBTC Bridge](https://apps.zkbtc.money/?mode=bridge) enables users to bring bitcoin to Ethereum. User simply deposit to the designated operator address with an additional output:
+```
+OP_RETURN(0x6a) || 0x14(20 bytes to follow) || recipient_address_eth(20 bytes)
+```
+The `OP_RETURN` output simply contains user's recipient address for the minted zkBTC tokens. It should be the original address in 20 bytes, not hex-encoded or `0x-` prefixed.
 
-    function settle(address _to, uint256 _amount) onlyOperator external {
-        require(_to != address(0), "Invalid recipient");
-        require(_amount > 0, "Amount must be > 0");
-        require (l2t.balanceOf(address(this)) >= _amount, "Vault balance too low");
-        bool success = l2t.transfer(_to, _amount);
-        require(success, "Transfer failed");
-        emit Settle(_to, _amount);
-    }
+When more data are encoded in the deposit transaction, we could prove these additional dato to some Ethereum smart contracts. This is the idea behind the ZenKeeper protocol. 
 
+The ZenKeeper protocol defines three additional roles:
+- `ZkRockets`: the smart contract that implements the ZenKeeper protocol and handles those cross-chain data;
+- `Vaults`: the smart contracts that could manager users zkBTC assets;
+- `Applications`: the smart contracts that could perform certain functionalities.
+
+Now the `OP_RETURN` output should contain data in the below format:
 ```
-## zkRockets 合约
-zkRocket 处理deposit 交易中OP_RETURN 后的数据
+                        ｜<----------------------------------ZkRockets-------------------------------------------------->|----Application Data------->
+    fields:              OP_REURN     op_pushbytes_x    length      vaultAddress    chainId    protocolId    userAddress     appData
+    length (in bytes):    1           1                 0/1/2/4        20            1           2             20             xxx 
 ```
-                   ｜<----------------------------------zkRockets--------------------------------->|----appData------->
-    fields:       OP_REURN     opcode     length      addressA    chainId    protocolId    addressB     appData
-    length(bytes):    1           1       0/1/2/4        20            1           2          20         xxx 
-```
-- addressA: zkBridge 处理deposit时，将过桥的zkBTC 以及奖励的的L2T Token 直接转账到该地址.addressA 3种可能:
+- op_pushbytes_x and (optional) length: this is how data length is encoded in the `OP_RETURN` output. When data length is not more than 75 (bytes), the op_pushbytes_x along tells the actual length (`x`) of data that follows. Over 75, the 1 or 2 or 4 bytes are used to encode the actualy length in little-endian fashion. See [op_return](https://learnmeabitcoin.com/technical/script/return/) and [data push](https://learnmeabitcoin.com/technical/script/#data) for more information.
+- vaultAddress: zkBridge 处理deposit时，将过桥的zkBTC 以及奖励的的L2T Token 直接转账到该地址.addressA 3种可能:
    - 用户地址. 此时用户不参与zkRockets 协议。
    - zkRocket 控制的vault 地址。
    - zkRocket 上的应用(例如zkRunes)控制的vault 地址。 
 - chainId: 因为支持从BTC 跨链到多条EVM链，用chainId跨链的目标链，0-eth 
 - addressB: 用户指定的地址
 - appData: zkRocket上的应用协议数据。
+
+
+## the ZkRockets Contract
+zkRocket 处理deposit 交易中OP_RETURN 后的数据
 
 zkRocket 要实现如下 retrieve 接口：
 ```solidity 
@@ -107,8 +101,33 @@ alt applications[protocolId] != address(0)
 else applications[protocolId] == address(0)
   Note over zkRocket, zkApp: do nothing 
 end
+```
+
+## Vault 合约
+Vault 是一个可托管zkBTC资产的金库合约，在deposit时，用于接收过桥的zkBTC 以及奖励的的L2T Token. 该合约提供一个credit和settle接口，
+- credit：用于在vault合约中给用户zkBTC记账。
+- settle：将vault合约中的L2T转移到别的地址
+这两个接口应该只被有特定权限的合约访问，例如zkRocket 或者zkApp
+```solidity
+    function credit(address _to, uint256 _amount) onlyOperator external {
+        require(_to != address(0), "Invalid recipient");
+        require(_amount > 0, "Amount must be > 0");
+        require (zkBTC.balanceOf(address(this)) >= _amount, "Vault balance too low");
+        balances[_to] += _amount;
+        emit Credit(_to, _amount);
+    }
+
+    function settle(address _to, uint256 _amount) onlyOperator external {
+        require(_to != address(0), "Invalid recipient");
+        require(_amount > 0, "Amount must be > 0");
+        require (l2t.balanceOf(address(this)) >= _amount, "Vault balance too low");
+        bool success = l2t.transfer(_to, _amount);
+        require(success, "Transfer failed");
+        emit Settle(_to, _amount);
+    }
 
 ```
+
 ## zkRockets 的应用合约
 应用合约要实现如下execute 接口：
 ```solidity 
