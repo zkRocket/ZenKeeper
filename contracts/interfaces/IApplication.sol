@@ -5,6 +5,7 @@ import "./IZKRocket.sol";
 import "../types/provenData.sol";
 
 interface IApplication {
-    function execute(address _vault, address _user, bytes32 _txid, uint256 _amount, ProvenData calldata _info) external;
+    // _appOffset is the offset of appData within _info.data
+    function execute(address _vault, address _user, bytes32 _txid, uint256 _amount, ProvenData calldata _info, uint8 _appOffset) external;
 }
 
