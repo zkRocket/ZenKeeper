@@ -18,8 +18,8 @@ contract ZKRocket is AccessControl {
     ITokenomicsModel immutable public tokenomicsModel;
     uint256 public immutable largeAmountThreshold;
     mapping(address => bool) public vaults;
-    uint16 public nextProtocolId = 1;
-    mapping(uint16 => IApplication) public applications;
+    uint32 public nextProtocolId = 1;
+    mapping(uint32 => IApplication) public applications;
     uint256[8] public l2tMintTable;
 
     /// @notice operator 角色标识
@@ -28,7 +28,7 @@ contract ZKRocket is AccessControl {
 
     event VaultAdded(address indexed vault);
     event VaultRemoved(address indexed vault);
-    event ApplicationRegistered(uint16 indexed protocolId, address indexed protoclAddress);
+    event ApplicationRegistered(uint32 indexed protocolId, address indexed protoclAddress);
 
     /// ---------- 修饰器 ----------
     modifier onlyAdmin() {
@@ -97,42 +97,23 @@ contract ZKRocket is AccessControl {
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
        require(_info.data.length >= 45, "Invalid data");
 
-        bytes memory data = _info.data;
-        uint256 vaultAddressOffset = 0;
+        bytes calldata data = _info.data;
+        (uint256 l, uint8 offset) = parsePushData(data[1:]); // data[0] is OP_RETURN
+        uint8 vaultAddressOffset = offset + 1;
+        require(l + vaultAddressOffset == data.length, "Invalid data length");
 
-        {
-            //data[0]=OP_RETURN,
-            uint256 l;
-            uint8 opcode = uint8(data[1]);
-            if (0x2B <= opcode && opcode <= 0x4B) { //43 ~75
-                l = opcode;
-                vaultAddressOffset = 2;
-            } else if (opcode == 0x4c) {
-                l = uint8(data[2]);
-                vaultAddressOffset = 3;
-            } else if (opcode == 0x4d) {
-                l = (uint16(uint8(data[3])) << 8) + uint8(data[2]);
-                vaultAddressOffset = 4;
-            } else if (opcode == 0x4e) {
-                l = (uint32(uint8(data[5])) << 24) +
-                    (uint32(uint8(data[4])) << 16) +
-                    (uint32(uint8(data[3])) << 8) + uint32(uint8(data[2]));
-                vaultAddressOffset = 6;
-            }
-            require(l == data.length-vaultAddressOffset, "Invalid data length");
-        }
-
-        // 解析字段
-        address vaultAddress = bytesToAddress(data, vaultAddressOffset);
-        address userAddress = bytesToAddress(data, vaultAddressOffset + 23);
-
+        address vaultAddress = bytesToAddress(data[vaultAddressOffset:]);
         uint8 chainId = uint8(data[vaultAddressOffset + 20]);
         require (chainId == 0, "not intended for Ethereum");
 
-        uint16 protocolId = (uint16(uint8(data[vaultAddressOffset + 21])) << 8) | uint8(data[vaultAddressOffset + 22]);
+        (uint32 protocolId, uint8 offset2) = parsePushData(data[vaultAddressOffset+21 :]);
+        uint8 userAddressOffset = vaultAddressOffset + 21 + offset2;
+        address userAddress = bytesToAddress(data[userAddressOffset:]);
 
         uint256 zkBTCAmount = calculateZKBTCAmount(_info.associatedAmount);
         address appAddress = address(applications[protocolId]);
+
+        // asset security: each vault and application must ensure having been passed user assets before crediting or transferring assets to users
         if (vaults[vaultAddress]) {
             IVault(vaultAddress).credit(userAddress, zkBTCAmount);
 
@@ -149,9 +130,29 @@ contract ZKRocket is AccessControl {
         }
     }
 
-    function bytesToAddress(bytes memory data, uint256 offset) private pure returns (address result) {
+    function parsePushData(bytes memory data) private pure returns (uint32 length, uint8 offset) {
+        uint8 opcode = uint8(data[0]);
+        if (1 <= opcode && opcode <= 0x4B) {
+            length = uint32(opcode);
+            offset = 1;
+        } else if (opcode == 0x4C) {
+            length = uint32(uint8(data[1]));
+            offset = 2;
+        } else if (opcode == 0x4D) {
+            length = (uint32(uint8(data[2]))) << 8 + uint32(uint8(data[1]));
+            offset = 3;
+        } else if (opcode == 0x4E) {
+            length = (uint32(uint8(data[4])) << 24) +
+                    (uint32(uint8(data[3])) << 16) +
+                    (uint32(uint8(data[2])) << 8) + 
+                    uint32(uint8(data[1]));
+            offset = 5;
+        }
+    }
+
+    function bytesToAddress(bytes memory data) private pure returns (address result) {
         assembly {
-            result := shr(96, mload(add(add(data, 0x20), offset)))
+            result := shr(96, mload(add(data, 0x20)))
         }
     }
 

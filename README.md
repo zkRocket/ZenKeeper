@@ -19,17 +19,23 @@ Now the `OP_RETURN` output should contain data in the below format:
 ```
                         ｜<----------------------------------ZkRockets-------------------------------------------------->|----Application Data------->
     fields:              OP_REURN     op_pushbytes_x    length      vaultAddress    chainId    protocolId    userAddress     appData
-    length (in bytes):    1           1                 0/1/2/4        20            1           2             20             xxx 
+    length (in bytes):    1           1                 0/1/2/4        20            1           1+x             20             xxx 
 ```
 - op_pushbytes_x and (optional) length: this is how data length is encoded in the `OP_RETURN` output. When data length is not more than 75 (bytes), the op_pushbytes_x along tells the actual length (`x`) of data that follows. Over 75, the 1 or 2 or 4 bytes are used to encode the actualy length in little-endian fashion. See [op_return](https://learnmeabitcoin.com/technical/script/return/) and [data push](https://learnmeabitcoin.com/technical/script/#data) for more information.
-- vaultAddress: zkBridge 处理deposit时，将过桥的zkBTC 以及奖励的的L2T Token 直接转账到该地址.addressA 3种可能:
-   - 用户地址. 此时用户不参与zkRockets 协议。
-   - zkRocket 控制的vault 地址。
-   - zkRocket 上的应用(例如zkRunes)控制的vault 地址。 
-- chainId: 因为支持从BTC 跨链到多条EVM链，用chainId跨链的目标链，0-eth 
-- addressB: 用户指定的地址
-- appData: zkRocket上的应用协议数据。
+- vaultAddress: this is actually the `recipient_address_eth` when purely depositing. zkBTC Bridge transfers the minted zkBTC tokens to this address, along with rewarded L2T. Aothough this happens out of `ZkRockets`'s scope, it is `ZkRockets`'s job to ensure the correct handling of users' assets. 
+- chainId: ZkRockets supports multiple chains, and 0 means Ethereum.
+- protocolId: the assigned Id for a vault or application. Follow the same encoding rules of [data push](https://learnmeabitcoin.com/technical/script/#data) 
+    - value in range 1~75: `1 bytes of OP_PUSHBYTES_X with X := id`;
+    - value in range 76~255: `0x4C || id`;
+    - value in range 256~65535: `0x4D || id % 256 || id>>8`;
+    - value in range 65536~: `0x4E || id % 256 || (id>>8) % 256 || (id>>16)%256 || id>>24`.
+- userAddress: user's recipient address
+- appData: application data
 
+There are 3 possibilities for vaultAddress:
+   - system vault, managed by the ZkRockets contract;
+   - application vault or the application itself;
+   - user's own address.
 
 ## the ZkRockets Contract
 zkRocket 处理deposit 交易中OP_RETURN 后的数据
