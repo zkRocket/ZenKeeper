@@ -95,38 +95,52 @@ contract ZKRocket is AccessControl {
     */
 
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
-       require(_info.data.length >= 45, "Invalid data");
+        require(_info.data.length >= 45, "Invalid data");
 
-        bytes calldata data = _info.data;
-        (uint256 l, uint8 offset) = parsePushData(data[1:]); // data[0] is OP_RETURN
-        uint8 vaultAddressOffset = offset + 1;
-        require(l + vaultAddressOffset == data.length, "Invalid data length");
+        address vaultAddress;
+        address userAddress;
+        uint32 protocolId;
+        uint8 userAddressOffset;
 
-        address vaultAddress = bytesToAddress(data[vaultAddressOffset:]);
-        uint8 chainId = uint8(data[vaultAddressOffset + 20]);
-        require (chainId == 0, "not intended for Ethereum");
+        {
+            bytes calldata data = _info.data;
+            (uint256 l, uint8 offset) = parsePushData(data[1:]); // data[0] is OP_RETURN
+            uint8 vaultAddressOffset = offset + 1;
+            require(l + vaultAddressOffset == data.length, "Invalid data length");
 
-        (uint32 protocolId, uint8 offset2) = parsePushData(data[vaultAddressOffset+21 :]);
-        uint8 userAddressOffset = vaultAddressOffset + 21 + offset2;
-        address userAddress = bytesToAddress(data[userAddressOffset:]);
+            vaultAddress = bytesToAddress(data[vaultAddressOffset:]);
 
-        uint256 zkBTCAmount = calculateZKBTCAmount(_info.associatedAmount);
+            require(uint8(data[vaultAddressOffset + 20]) == 0, "not intended for Ethereum");
+
+            uint8 offset2;
+            (protocolId, offset2) = parsePushData(data[vaultAddressOffset + 21 :]);
+            userAddressOffset = vaultAddressOffset + 21 + offset2;
+            userAddress = bytesToAddress(data[userAddressOffset:]);
+        }
+
         address appAddress = address(applications[protocolId]);
+        uint256 zkBTCAmount = calculateZKBTCAmount(_info.associatedAmount);
 
-        // asset security: each vault and application must ensure having been passed user assets before crediting or transferring assets to users
         if (vaults[vaultAddress]) {
             IVault(vaultAddress).credit(userAddress, zkBTCAmount);
 
             if ((appAddress != vaultAddress) && (appAddress != address(0))) {
                 uint256 l2tAmount = calculateL2TAmount(_info.associatedAmount);
-                if (l2tAmount > 0){
+                if (l2tAmount > 0) {
                     IVault(vaultAddress).settle(appAddress, l2tAmount);
                 }
             }
         }
 
         if (appAddress != address(0)) {
-            IApplication(appAddress).execute(vaultAddress, userAddress, _txid, zkBTCAmount, _info, userAddressOffset+20);
+            IApplication(appAddress).execute(
+                vaultAddress,
+                userAddress,
+                _txid,
+                zkBTCAmount,
+                _info,
+                userAddressOffset + 20
+            );
         }
     }
 
