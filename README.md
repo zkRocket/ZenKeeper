@@ -58,12 +58,6 @@ Specifically:
 - the `settle` function usually sends back the rewarded L2T to the application as identified by `protocolId`;
 - the `execute` function performs whatever functionality defined by the application as identified by `protocolId`.
 
-### Vault Composability
-Since the zkBTC Bridge contract has already deposited the minted zkBTC tokens to th `vaultAddress` (along with L2T rewards), the vault contracts must support asynchronous deposit. However, the semantic is slightly different from that of [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540). It is advised that the vault could be implemented as an adaptor to another ERC-7540 vault.
-
-### Application Security
-The application, as identified by `protocolId`, may have or have not received the minted zkBTC, depending on whether the user has set the `vaultAddress` to the same contract or another one. Therefore if the application expects minted zkBTC from users, it must check if it has received such. It is application developer's responsibility to ensure asset security here.
-
 ### zkRockets Workflows
 
 #### Registering the ZkRockets Contract to zkBTC Bridge
@@ -130,11 +124,11 @@ else application == 0
 end
 ```
 
-## Vault 合约
-Vault 是一个可托管zkBTC资产的金库合约，在deposit时，用于接收过桥的zkBTC 以及奖励的的L2T Token. 该合约提供一个credit和settle接口，
-- credit：用于在vault合约中给用户zkBTC记账。
-- settle：将vault合约中的L2T转移到别的地址
-这两个接口应该只被有特定权限的合约访问，例如zkRocket 或者zkApp
+## Vault
+A Vault is a smart contract capable of managing zkBTC assets for users. A ZkRockets System Vault is a vault that is reviewed and registered to the ZkRockets contract.
+
+During regular zkBTC Bridge operation (before retrieval of proven data), the minted zkBTC tokens have already been deposited to the `vaultAddress` (after deducting certains fees). This happens outside of the ZkRockets system. When the address of a ZkRockets Vault is specified as `vaultAddress`, then the ZkRockets contract has the chance to `credit` user for the amount. Also, it is the system design that the system valut must `settle` the rewarded L2T back to the intended application identified by `protocolId`.
+
 ```solidity
     function credit(address _to, uint256 _amount) onlyOperator external {
         require(_to != address(0), "Invalid recipient");
@@ -155,9 +149,19 @@ Vault 是一个可托管zkBTC资产的金库合约，在deposit时，用于接�
 
 ```
 
-## zkRockets 的应用合约
-应用合约要实现如下execute 接口：
+### Security
+Access to both `credit` and `settle` functions should be restricted.
+
+### Composability
+Since the zkBTC Bridge contract has already deposited the minted zkBTC tokens to th `vaultAddress` (along with L2T rewards), the vault contracts must support asynchronous deposit. However, the semantic is slightly different from that of [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540). It is advised that the vault could be implemented as an adaptor to another ERC-7540 vault.
+
+## Application Contracts
+Implement this function:
 ```solidity 
- function execute(address vaultAddress, addres userAddress, uint256 amount, Provendata data, uint8 appOffset) external;
+ function execute(address vaultAddress, addres userAddress, uint256 amount, Provendata data, uint8 appOffset) onlyOperator external;
 ```
 
+### Security
+Access to the `execute` function should be restricted.
+
+The application, as identified by `protocolId`, may have or have not received the minted zkBTC, depending on whether the user has set the `vaultAddress` to the same contract or another one. Therefore if the application expects minted zkBTC from users, it must check if it has received such. It is application developer's responsibility to ensure asset security here.
