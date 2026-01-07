@@ -64,68 +64,69 @@ Since the zkBTC Bridge contract has already deposited the minted zkBTC tokens to
 ### Application Security
 The application, as identified by `protocolId`, may have or have not received the minted zkBTC, depending on whether the user has set the `vaultAddress` to the same contract or another one. Therefore if the application expects minted zkBTC from users, it must check if it has received such. It is application developer's responsibility to ensure asset security here.
 
-### zkRockets 主要流程
+### zkRockets Workflows
 
-#### 在zkBridge上注册 zkRockets 
+#### Registering the ZkRockets Contract to zkBTC Bridge
 ```mermaid
 sequenceDiagram
     participant adminstrator
-    participant zkBridge
+    participant zkBTC Bridge
 
-    adminstrator ->> zkBridge: updateReserveInterface(zkRocketAddress)
-    zkBridge ->> zkBridge: reserveInterface = zkRocketAddress
+    adminstrator ->> zkBTC Bridge: updateReserveInterface(ZkRockets Address)
+    zkBTC Bridge ->> zkBTC Bridge: reserveInterface = ZkRockets Address
 
 ```
 
-#### 在zkRockets上注册应用协议
-- aution 在拍卖成功后可以在zkRocket上注册应用。
+#### Registering Applications to the ZkRockets Contract
+- Aution
 ```mermaid
 sequenceDiagram
     participant aution
-    participant zkRocket
+    participant ZkRockets
 
-    aution ->> zkRocket: registerApplication(protocolId, appAddress)
-    zkRocket ->> zkRocket: appliations[protocolId] = appAddress
+    aution ->> ZkRockets: registerApplication(protocolId, appAddress)
+    ZkRockets ->> ZkRockets: appliations[protocolId] = appAddress
 ```
-- zkRocket的adminstrator 也可以直接注册appliction
+- Admin
 ```mermaid
 sequenceDiagram
     participant adminstrator
-    participant zkRocket
+    participant ZkRockets
 
-    adminstrator ->> zkRocket: registerApplication(protocolId, appAddress)
-    zkRocket ->> zkRocket: appliations[protocolId] = appAddress
+    adminstrator ->> ZkRockets: registerApplication(protocolId, appAddress)
+    ZkRockets ->> ZkRockets: appliations[protocolId] = appAddress
 ```
 
-
-#### 用户调用zkBridge 的retrieve 函数，触发zkRockets 处理 
+#### Retrieval of Proven Data
 ```mermaid
 sequenceDiagram
     participant user 
-    participant zkBridge
-    participant zkRocket
+    participant zkBTC Bridge
+    participant ZkRockets
     participant vault
     participant zkApp 
 
-user ->> zkBridge: retrieve(txid)
-zkBridge ->> zkBridge: if retrieved == true, revert 
-zkBridge ->> zkRocket: retrieve(index, blockHash, amount, data)
-zkRocket ->> zkRocket: decode data 得到 vaultAddress, userAddress, protocolId
-Note over zkRocket, vault: zkRocket's vault 
-alt vault[vaultAddress] == true  //vault是zkRocket的金库
-    zkRocket ->> vault: credit(userAddress, amount) //为用户的zkBTC 记账
+user ->> zkBTC Bridge: retrieve(txid)
+zkBTC Bridge ->> zkBTC Bridge: revert if retrieved == true
+zkBTC Bridge ->> ZkRockets: retrieve(ProvenData calldata info, bytes32 txid)
+ZkRockets ->> ZkRockets: decode data -> (vaultAddress, userAddress, protocolId, appDataOffset)
+Note over ZkRockets, vault: System Vault of ZkRockets
+
+ZkRockets->>ZkRockets: application := applications[protolId]
+
+alt vault[vaultAddress] == true  //vaultAddress is a ZkRockets System Vault
+    ZkRockets ->> vault: credit(userAddress, amount)
     
-    alt applications[protolId] != vaultAddress && applications[protolId] != address(0) //用户参与其他的应用
-        zkRocket->>zkRocket: l2tAmount = calculateL2TAmount(_info.associatedAmount)    // 计算L2T 数量
-        vault->>vault:  IVault(vaultAddress).settle(address(applications[protocolId]), l2tAmount) //将zkBTC转给用户
+    alt application != vaultAddress && application != 0
+        ZkRockets->>ZkRockets: l2tAmount := calculateL2TAmount(_info.associatedAmount)
+        vault->>vault:  IVault(vaultAddress).settle(application, l2tAmount)
     end
 end 
 
-
-alt applications[protocolId] != address(0)
-  zkRocket->>zkApp:  execute(vaultAddress, userAddress, amount, data)
-else applications[protocolId] == address(0)
-  Note over zkRocket, zkApp: do nothing 
+alt application != 0
+  ZkRockets->>zkApp:  execute(vaultAddress, userAddress, amount, data, appDataOffset)
+else application == 0
+  Note over ZkRockets, zkApp: do nothing 
 end
 ```
 
