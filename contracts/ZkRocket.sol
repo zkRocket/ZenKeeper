@@ -108,14 +108,14 @@ contract ZKRocket is AccessControl {
             uint8 vaultAddressOffset = offset + 1;
             require(l + vaultAddressOffset == data.length, "Invalid data length");
 
-            vaultAddress = bytesToAddress(data[vaultAddressOffset:]);
+            vaultAddress = address(bytes20(data[vaultAddressOffset:vaultAddressOffset+20]));
 
             require(uint8(data[vaultAddressOffset + 20]) == 0, "not intended for Ethereum");
 
             uint8 offset2;
             (protocolId, offset2) = parsePushData(data[vaultAddressOffset + 21 :]);
             userAddressOffset = vaultAddressOffset + 21 + offset2;
-            userAddress = bytesToAddress(data[userAddressOffset:]);
+            userAddress = address(bytes20(data[userAddressOffset:userAddressOffset+20]));
         }
 
         address appAddress = address(applications[protocolId]);
@@ -161,12 +161,6 @@ contract ZKRocket is AccessControl {
                     (uint32(uint8(data[2])) << 8) + 
                     uint32(uint8(data[1]));
             offset = 5;
-        }
-    }
-
-    function bytesToAddress(bytes memory data) private pure returns (address result) {
-        assembly {
-            result := shr(96, mload(add(data, 0x20)))
         }
     }
 
