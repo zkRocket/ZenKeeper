@@ -90,10 +90,10 @@ contract ZKRocket is AccessControl {
 
     /// @notice  only zkBridge
     /*           | <--------------------------------at least 45 bytes ------------------------->|
-    fields:       OP_RETURN opcode     length     vaultAddress  chainId  protocolId   userAddress  appData
-    length(bytes):    1        1       0/1/2/4        20            1           2         20
+    fields:       OP_RETURN entire-length     vaultAddress  chainId  protocolId   userAddress  appData
+    length(bytes):    1        1+x           20            1           1+x         20
+    Note that both entire-length and protocolId are encoded in bitcoin pushdata
     */
-
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
         require(_info.data.length >= 45, "Invalid data");
 
