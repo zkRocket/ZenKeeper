@@ -158,7 +158,18 @@ Since the zkBTC Bridge contract has already deposited the minted zkBTC tokens to
 ## Application Contracts
 Implement this function:
 ```solidity 
- function execute(address vaultAddress, addres userAddress, uint256 amount, Provendata data, uint8 appOffset) onlyOperator external;
+ function execute(address vaultAddress, addres userAddress, uint256 amount, ProvenData calldata provenData, uint8 appDataOffset) onlyOperator external;
+```
+
+- **`appDataOffset`** is the offset into the proven data as should be provided to the application. Specifically `provenData.data[appOffset:]` should be the application data. `ProvenData` is defined in ZenKeeper:
+```
+    struct ProvenData {
+        uint32 index;
+        bytes32 blockHash;
+        uint64 associatedAmount;
+        bytes data;
+        bool retrieved;
+    }
 ```
 
 ### Security
