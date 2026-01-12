@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IZKRocket.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/ITokenomicsModel.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 
 contract ZKRocket is AccessControl {
@@ -83,6 +84,9 @@ contract ZKRocket is AccessControl {
 
     /// @notice auction launcher register application
     function registerApplication(IApplication _protocolAddress) external onlyAuctionLauncherOrAdmin {
+        bytes4 executableInterfaceId = type(IApplication).interfaceId;
+        require(IERC165(address(_protocolAddress)).supportsInterface(executableInterfaceId), 'not implemented as required');
+
         applications[nextProtocolId] = _protocolAddress;
         emit ApplicationRegistered(nextProtocolId, address(_protocolAddress));
         nextProtocolId += 1;
