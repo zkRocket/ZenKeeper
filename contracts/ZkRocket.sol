@@ -69,10 +69,14 @@ contract ZKRocket is AccessControl {
     }
 
     /// @notice 添加新的 vault（仅限 admin）
-    function addVault(address _vault) external onlyAdmin {
-        require(_vault.code.length > 0, "Invalid vault address");
-        vaults[_vault] = true;
-        emit VaultAdded(_vault);
+    function addVault(IVault _vault) external onlyAdmin {
+        require(address(_vault).code.length > 0, "Invalid vault address");
+
+        bytes4 executableInterfaceId = type(IVault).interfaceId;
+        require(IERC165(address(_vault)).supportsInterface(executableInterfaceId), 'not implemented as required');
+
+        vaults[address(_vault)] = true;
+        emit VaultAdded(address(_vault));
     }
 
     /// @notice 移除 vault（仅限 admin）

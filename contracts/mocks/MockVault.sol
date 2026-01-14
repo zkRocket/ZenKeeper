@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import {IVault} from "../interfaces/IVault.sol";
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 contract MockVault is IVault, AccessControl {
     IERC20 public immutable zkBTC;
@@ -69,5 +70,11 @@ contract MockVault is IVault, AccessControl {
         require(amount >= _amount, "Insufficient funds");
         bool success = l2t.transfer(_to, _amount);
         require(success, "Transfer failed");
+    }
+
+    function supportsInterface(bytes4 interfaceId) public view virtual override returns (bool) {
+        return
+                interfaceId == type(IVault).interfaceId || // 注册 IVault 所在的接口
+                super.supportsInterface(interfaceId);
     }
 }
