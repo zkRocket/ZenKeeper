@@ -15,8 +15,8 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
     uint256 public zkBTCDecimals;
     uint256 public l2tDecimals;
 
-    ITokenomicsModel immutable public tokenomicsModel;
-    uint256 public immutable largeAmountThreshold;
+    ITokenomicsModel immutable public TOKENOMICS_MODEL;
+    uint256 public immutable LARGE_AMOUNT_THRESHOLD;
     mapping(address => bool) public vaults;
     uint32 public nextProtocolId = 1;
     mapping(uint32 => IApplication) public applications;
@@ -57,7 +57,7 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
     }
 
     error DecimalsMismatch();
-    constructor(IERC20Metadata zkbtc, IERC20Metadata l2t, ITokenomicsModel _tokenomicsModel) {
+    constructor(IERC20Metadata zkbtc, IERC20Metadata l2t, ITokenomicsModel tokenomicsModel) {
         ZKBTC = zkbtc;
         L2_TOKEN = l2t;
 
@@ -69,8 +69,8 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
         uint256 decimalsDiff = l2tDecimals - zkBTCDecimals;
         l2tMintTable = [uint256(128*10**decimalsDiff), 64*10**decimalsDiff, 32*10**decimalsDiff, 16*10**decimalsDiff, 8*10**decimalsDiff, 4*10**decimalsDiff, 2*10**decimalsDiff, 1*10**decimalsDiff];
 
-        tokenomicsModel = _tokenomicsModel;
-        largeAmountThreshold = uint256(tokenomicsModel.LARGE_AMOUNT_THRESHOLD());
+        TOKENOMICS_MODEL = tokenomicsModel;
+        LARGE_AMOUNT_THRESHOLD = uint256(TOKENOMICS_MODEL.LARGE_AMOUNT_THRESHOLD());
 
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
@@ -198,7 +198,7 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
     }
 
     function calculateL2TAmount(uint256 _zkBTCAmount) public view returns (uint256) {
-        uint256 round = tokenomicsModel.startRound();
+        uint256 round = TOKENOMICS_MODEL.startRound();
 
         if (round < l2tMintTable.length) {
             return (_zkBTCAmount * l2tMintTable[round] * 9)/10;
@@ -207,12 +207,12 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
     }
 
     function calculateZKBTCAmount(uint256 _zkBTCAmount) public view returns (uint256) {
-        uint256 round = tokenomicsModel.startRound();
+        uint256 round = TOKENOMICS_MODEL.startRound();
         uint256 feeRate = 0;
-        if (_zkBTCAmount < largeAmountThreshold) {
-            feeRate = tokenomicsModel.smallAmountFeeRates(round);
+        if (_zkBTCAmount < LARGE_AMOUNT_THRESHOLD) {
+            feeRate = TOKENOMICS_MODEL.smallAmountFeeRates(round);
         }else {
-            feeRate = tokenomicsModel.largeAmountFeeRates(round);
+            feeRate = TOKENOMICS_MODEL.largeAmountFeeRates(round);
         }
 
         uint256 fee = _zkBTCAmount * feeRate / 10000;
