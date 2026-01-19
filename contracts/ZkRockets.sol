@@ -4,13 +4,13 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./interfaces/IZKRocket.sol";
+import "./interfaces/IZkRockets.sol";
 import "./interfaces/IVault.sol";
 import "./interfaces/ITokenomicsModel.sol";
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
 
-contract ZKRocket is AccessControl {
+contract ZkRockets is AccessControl {
     IERC20Metadata immutable public zkBTC;
     IERC20Metadata immutable public l2t;
     uint256 public zkBTCDecimals;
