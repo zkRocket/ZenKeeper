@@ -30,24 +30,29 @@ contract ZkRockets is AccessControl {
     event VaultRemoved(address indexed vault);
     event ApplicationRegistered(uint32 indexed protocolId, address indexed protoclAddress);
 
+    error CallerNotAdmin();
+    error CallerNotBridge();
+    error CallerNotAuctionLauncherOrAdmin();
+
     /// ---------- 修饰器 ----------
     modifier onlyAdmin() {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not admin");
+        if(!hasRole(DEFAULT_ADMIN_ROLE, msg.sender)){
+            revert CallerNotAdmin();
+        }
         _;
     }
 
     modifier onlyBridge() {
-        require(hasRole(BRIDGE_ROLE, msg.sender), "Caller is not bridge");
-        _;
-    }
-
-    modifier onlyAuctionLauncher() {
-        require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender), "Caller is not auction launcher");
+        if(!hasRole(BRIDGE_ROLE, msg.sender)){
+            revert CallerNotBridge();
+        }
         _;
     }
 
     modifier onlyAuctionLauncherOrAdmin() {
-        require(hasRole(AUCTION_LAUNCHER_ROLE, msg.sender)||hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "Caller is not auction launcher or admin");
+        if(!hasRole(AUCTION_LAUNCHER_ROLE, msg.sender) && !hasRole(DEFAULT_ADMIN_ROLE, msg.sender)){
+            revert CallerNotAuctionLauncherOrAdmin();
+        }
         _;
     }
 
