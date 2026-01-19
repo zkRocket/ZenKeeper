@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/AccessControl.sol";
-import "./interfaces/IZkRockets.sol";
-import "./interfaces/IVault.sol";
-import "./interfaces/ITokenomicsModel.sol";
-import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
+import {IApplication, ProvenData} from "./interfaces/IZkRockets.sol";
+import {IVault} from "./interfaces/IVault.sol";
+import {ITokenomicsModel} from "./interfaces/ITokenomicsModel.sol";
 
 contract ZkRockets is AccessControl {
     IERC20Metadata immutable public zkBTC;
@@ -73,7 +72,7 @@ contract ZkRockets is AccessControl {
         require(address(_vault).code.length > 0, "Invalid vault address");
 
         bytes4 executableInterfaceId = type(IVault).interfaceId;
-        require(IERC165(address(_vault)).supportsInterface(executableInterfaceId), 'not implemented as required');
+        require(IERC165(address(_vault)).supportsInterface(executableInterfaceId), "not implemented as required");
 
         vaults[address(_vault)] = true;
         emit VaultAdded(address(_vault));
@@ -89,7 +88,7 @@ contract ZkRockets is AccessControl {
     /// @notice auction launcher register application
     function registerApplication(IApplication _protocolAddress) external onlyAuctionLauncherOrAdmin {
         bytes4 executableInterfaceId = type(IApplication).interfaceId;
-        require(IERC165(address(_protocolAddress)).supportsInterface(executableInterfaceId), 'not implemented as required');
+        require(IERC165(address(_protocolAddress)).supportsInterface(executableInterfaceId), "not implemented as required");
 
         applications[nextProtocolId] = _protocolAddress;
         emit ApplicationRegistered(nextProtocolId, address(_protocolAddress));
