@@ -5,11 +5,11 @@ import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IER
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
-import {IApplication, ProvenData} from "./interfaces/IZkRockets.sol";
+import {IApplication, ProvenData, ReserveInterface, IRegisterApplication} from "./interfaces/IZkRockets.sol";
 import {IVault} from "./interfaces/IVault.sol";
 import {ITokenomicsModel} from "./interfaces/ITokenomicsModel.sol";
 
-contract ZkRockets is AccessControl {
+contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
     IERC20Metadata immutable public zkBTC;
     IERC20Metadata immutable public l2t;
     uint256 public zkBTCDecimals;

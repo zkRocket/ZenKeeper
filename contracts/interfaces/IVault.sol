@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 
-interface IVault {
+interface IVault is IERC165 {
     event Credit(address indexed user, uint256 amount);
     event Settle(address indexed user, uint256 amount);
 
