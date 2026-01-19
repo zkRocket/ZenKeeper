@@ -56,13 +56,16 @@ contract ZkRockets is AccessControl {
         _;
     }
 
+    error DecimalsMismatch();
     constructor(IERC20Metadata _zkBTC, IERC20Metadata _l2t, ITokenomicsModel _tokenomicsModel) {
         zkBTC = _zkBTC;
         l2t = _l2t;
 
         zkBTCDecimals = zkBTC.decimals();
         l2tDecimals = l2t.decimals();
-        require(l2tDecimals >= zkBTCDecimals, "Decimals mismatch");
+        if (l2tDecimals < zkBTCDecimals){
+            revert DecimalsMismatch();
+        }
         uint256 decimalsDiff = l2tDecimals - zkBTCDecimals;
         l2tMintTable = [uint256(128*10**decimalsDiff), 64*10**decimalsDiff, 32*10**decimalsDiff, 16*10**decimalsDiff, 8*10**decimalsDiff, 4*10**decimalsDiff, 2*10**decimalsDiff, 1*10**decimalsDiff];
 
@@ -72,12 +75,15 @@ contract ZkRockets is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
+    error NotImplemented();
     /// @notice 添加新的 vault（仅限 admin）
     function addVault(IVault _vault) external onlyAdmin {
         require(address(_vault).code.length > 0, "Invalid vault address");
 
-        bytes4 executableInterfaceId = type(IVault).interfaceId;
-        require(IERC165(address(_vault)).supportsInterface(executableInterfaceId), "not implemented as required");
+        bytes4 vaultInterfaceId = type(IVault).interfaceId;
+        if(!IERC165(address(_vault)).supportsInterface(vaultInterfaceId)){
+            revert NotImplemented();
+        }
 
         vaults[address(_vault)] = true;
         emit VaultAdded(address(_vault));
@@ -93,7 +99,9 @@ contract ZkRockets is AccessControl {
     /// @notice auction launcher register application
     function registerApplication(IApplication _protocolAddress) external onlyAuctionLauncherOrAdmin {
         bytes4 executableInterfaceId = type(IApplication).interfaceId;
-        require(IERC165(address(_protocolAddress)).supportsInterface(executableInterfaceId), "not implemented as required");
+        if(!IERC165(address(_protocolAddress)).supportsInterface(executableInterfaceId)){
+            revert NotImplemented();
+        }
 
         applications[nextProtocolId] = _protocolAddress;
         emit ApplicationRegistered(nextProtocolId, address(_protocolAddress));
@@ -116,9 +124,9 @@ contract ZkRockets is AccessControl {
 
         {
             bytes calldata data = _info.data;
-            (uint256 l, uint8 offset) = parsePushData(data[1:]); // data[0] is OP_RETURN
+            (uint256 len, uint8 offset) = parsePushData(data[1:]); // data[0] is OP_RETURN
             uint8 vaultAddressOffset = offset + 1;
-            require(l + vaultAddressOffset == data.length, "Invalid data length");
+            require(len + vaultAddressOffset == data.length, "Invalid data length");
 
             vaultAddress = address(bytes20(data[vaultAddressOffset:vaultAddressOffset+20]));
 
