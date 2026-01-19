@@ -10,8 +10,8 @@ import {IVault} from "./interfaces/IVault.sol";
 import {ITokenomicsModel} from "./interfaces/ITokenomicsModel.sol";
 
 contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
-    IERC20Metadata immutable public zkBTC;
-    IERC20Metadata immutable public l2t;
+    IERC20Metadata immutable public ZKBTC;
+    IERC20Metadata immutable public L2_TOKEN;
     uint256 public zkBTCDecimals;
     uint256 public l2tDecimals;
 
@@ -57,12 +57,12 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
     }
 
     error DecimalsMismatch();
-    constructor(IERC20Metadata _zkBTC, IERC20Metadata _l2t, ITokenomicsModel _tokenomicsModel) {
-        zkBTC = _zkBTC;
-        l2t = _l2t;
+    constructor(IERC20Metadata zkbtc, IERC20Metadata l2t, ITokenomicsModel _tokenomicsModel) {
+        ZKBTC = zkbtc;
+        L2_TOKEN = l2t;
 
-        zkBTCDecimals = zkBTC.decimals();
-        l2tDecimals = l2t.decimals();
+        zkBTCDecimals = ZKBTC.decimals();
+        l2tDecimals = L2_TOKEN.decimals();
         if (l2tDecimals < zkBTCDecimals){
             revert DecimalsMismatch();
         }
@@ -75,10 +75,13 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
     }
 
+    error InvalidVaultAddress();
     error NotImplemented();
     /// @notice 添加新的 vault（仅限 admin）
     function addVault(IVault _vault) external onlyAdmin {
-        require(address(_vault).code.length > 0, "Invalid vault address");
+        if(address(_vault).code.length == 0){
+            revert InvalidVaultAddress();
+        }
 
         bytes4 vaultInterfaceId = type(IVault).interfaceId;
         if(!IERC165(address(_vault)).supportsInterface(vaultInterfaceId)){
@@ -91,9 +94,10 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
 
     /// @notice 移除 vault（仅限 admin）
     function removeVault(address _vault) external onlyAdmin {
-        require(vaults[_vault], "Vault not found");
-        delete vaults[_vault];
-        emit VaultRemoved(_vault);
+        if(vaults[_vault]){
+            delete vaults[_vault];
+            emit VaultRemoved(_vault);
+        }
     }
 
     /// @notice auction launcher register application
@@ -108,6 +112,9 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
         nextProtocolId += 1;
      }
 
+    error InvalidData();
+    error InvalidDataLength();
+    error NotForEthereum();
     /// @notice  only zkBridge
     /*           | <--------------------------------at least 45 bytes ------------------------->|
     fields:       OP_RETURN entire-length     vaultAddress  chainId  protocolId   userAddress  appData
@@ -115,7 +122,9 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
     Note that both entire-length and protocolId are encoded in bitcoin pushdata
     */
     function retrieve(ProvenData calldata _info, bytes32 _txid) external onlyBridge {
-        require(_info.data.length >= 45, "Invalid data");
+        if(_info.data.length < 45){
+            revert InvalidData();
+        }
 
         address vaultAddress;
         address userAddress;
@@ -126,11 +135,15 @@ contract ZkRockets is AccessControl, ReserveInterface, IRegisterApplication {
             bytes calldata data = _info.data;
             (uint256 len, uint8 offset) = parsePushData(data[1:]); // data[0] is OP_RETURN
             uint8 vaultAddressOffset = offset + 1;
-            require(len + vaultAddressOffset == data.length, "Invalid data length");
+            if(len + vaultAddressOffset != data.length){
+                revert InvalidDataLength();
+            }
 
             vaultAddress = address(bytes20(data[vaultAddressOffset:vaultAddressOffset+20]));
 
-            require(uint8(data[vaultAddressOffset + 20]) == 0, "not intended for Ethereum");
+            if(uint8(data[vaultAddressOffset + 20]) != 0){
+                revert NotForEthereum();
+            }
 
             uint8 offset2;
             (protocolId, offset2) = parsePushData(data[vaultAddressOffset + 21 :]);
